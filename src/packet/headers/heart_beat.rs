@@ -1,0 +1,73 @@
+use super::{calc_header_size, HeaderReader, HeaderWriter};
+use crate::error::NetworkResult;
+use crate::packet::PacketTypeId;
+use crate::protocol_version::ProtocolVersion;
+use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
+use lazy_static::lazy_static;
+use std::io::Cursor;
+
+lazy_static! {
+    static ref HEADER_SIZE: u8 = calc_header_size::<HeartBeatHeader>();
+}
+
+/// This header represents an heartbeat packet header.
+/// A heart beat just keeps the client awake.
+#[derive(Copy, Clone, Debug)]
+pub struct HeartBeatHeader {
+    packet_type_id: PacketTypeId,
+}
+
+impl HeartBeatHeader {
+    /// Create new heartbeat header.
+    pub fn new() -> Self {
+        HeartBeatHeader {
+            packet_type_id: PacketTypeId::HeartBeat,
+        }
+    }
+}
+
+impl Default for HeartBeatHeader {
+    fn default() -> Self {
+        HeartBeatHeader::new()
+    }
+}
+
+impl HeaderWriter for HeartBeatHeader {
+    type Output = NetworkResult<()>;
+
+    fn write(&self, buffer: &mut Vec<u8>) -> <Self as HeaderWriter>::Output {
+        buffer.write_u32::<BigEndian>(ProtocolVersion::get_crc32())?;
+        buffer.write_u8(PacketTypeId::get_id(self.packet_type_id))?;
+
+        Ok(())
+    }
+}
+
+impl HeaderReader for HeartBeatHeader {
+    type Header = NetworkResult<HeartBeatHeader>;
+
+    fn read(rdr: &mut Cursor<&[u8]>) -> <Self as HeaderReader>::Header {
+        let _ = rdr.read_u32::<BigEndian>()?;
+        let _ = rdr.read_u8();
+        let header = Self {
+            packet_type_id: PacketTypeId::HeartBeat,
+        };
+
+        Ok(header)
+    }
+
+    /// Get the size of this header.
+    fn size(&self) -> u8 {
+        *HEADER_SIZE
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{HeaderReader, HeaderWriter, HEADER_SIZE};
+
+    #[test]
+    pub fn header_size_test() {
+        assert_eq!(*HEADER_SIZE, 5);
+    }
+}
