@@ -8,15 +8,13 @@ pub use self::fragment::FragmentHeader;
 pub use self::heart_beat::HeartBeatHeader;
 pub use self::standard::{StandardHeader, HEADER_SIZE as STANDARD_HEADER_SIZE};
 
+use crate::error::NetworkResult;
 use std::io::Cursor;
 
 /// Trait for parsing a header
 pub trait HeaderWriter {
-    /// Associated type of the result we expect.
-    type Output;
-
     /// Write the header to the given buffer.
-    fn write(&self, buffer: &mut Vec<u8>) -> Self::Output;
+    fn write(&self, buffer: &mut Vec<u8>) -> NetworkResult<()>;
 }
 
 /// Trait that supports reading a Header from a packet

@@ -70,9 +70,7 @@ impl Default for FragmentHeader {
 }
 
 impl HeaderWriter for FragmentHeader {
-    type Output = NetworkResult<()>;
-
-    fn write(&self, buffer: &mut Vec<u8>) -> <Self as HeaderWriter>::Output {
+    fn write(&self, buffer: &mut Vec<u8>) -> NetworkResult<()> {
         self.standard_header.write(buffer)?;
         buffer.write_u16::<BigEndian>(self.sequence_num)?;
         buffer.write_u8(self.id)?;
@@ -95,7 +93,7 @@ impl HeaderWriter for FragmentHeader {
 impl HeaderReader for FragmentHeader {
     type Header = NetworkResult<FragmentHeader>;
 
-    fn read(rdr: &mut Cursor<&[u8]>) -> <Self as HeaderReader>::Header {
+    fn read(rdr: &mut Cursor<&[u8]>) -> Self::Header {
         let standard_header = StandardHeader::read(rdr)?;
         let sequence_num = rdr.read_u16::<BigEndian>()?;
         let id = rdr.read_u8()?;

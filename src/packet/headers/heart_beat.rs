@@ -33,9 +33,7 @@ impl Default for HeartBeatHeader {
 }
 
 impl HeaderWriter for HeartBeatHeader {
-    type Output = NetworkResult<()>;
-
-    fn write(&self, buffer: &mut Vec<u8>) -> <Self as HeaderWriter>::Output {
+    fn write(&self, buffer: &mut Vec<u8>) -> NetworkResult<()> {
         buffer.write_u32::<BigEndian>(ProtocolVersion::get_crc32())?;
         buffer.write_u8(PacketTypeId::get_id(self.packet_type_id))?;
 
@@ -46,7 +44,7 @@ impl HeaderWriter for HeartBeatHeader {
 impl HeaderReader for HeartBeatHeader {
     type Header = NetworkResult<HeartBeatHeader>;
 
-    fn read(rdr: &mut Cursor<&[u8]>) -> <Self as HeaderReader>::Header {
+    fn read(rdr: &mut Cursor<&[u8]>) -> Self::Header {
         let _ = rdr.read_u32::<BigEndian>()?;
         let _ = rdr.read_u8();
         let header = Self {
