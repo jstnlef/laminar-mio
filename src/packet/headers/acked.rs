@@ -119,6 +119,6 @@ mod tests {
 
     #[test]
     pub fn header_size_test() {
-        assert_eq!(*HEADER_SIZE, 14);
+        assert_eq!(AckedPacketHeader::default().size(), 14);
     }
 }

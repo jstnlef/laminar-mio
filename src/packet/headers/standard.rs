@@ -101,6 +101,6 @@ mod tests {
 
     #[test]
     pub fn header_size_test() {
-        assert_eq!(*HEADER_SIZE, 6);
+        assert_eq!(StandardHeader::default().size(), 6);
     }
 }

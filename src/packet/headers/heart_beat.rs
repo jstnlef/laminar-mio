@@ -62,10 +62,10 @@ impl HeaderReader for HeartBeatHeader {
 
 #[cfg(test)]
 mod tests {
-    use super::{HeaderReader, HeaderWriter, HEADER_SIZE};
+    use super::{HeaderReader, HeaderWriter, HeartBeatHeader};
 
     #[test]
     pub fn header_size_test() {
-        assert_eq!(*HEADER_SIZE, 5);
+        assert_eq!(HeartBeatHeader::default().size(), 5);
     }
 }

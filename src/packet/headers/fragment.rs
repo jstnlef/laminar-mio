@@ -121,8 +121,7 @@ impl HeaderReader for FragmentHeader {
             match self.packet_header {
                 Some(header) => header.size() + *HEADER_SIZE,
                 None => {
-                    error!("Attempting to retrieve size on a 0 ID packet with no packet header");
-                    0
+                    panic!("Attempting to retrieve size on a 0 ID packet with no packet header");
                 }
             }
         } else {
@@ -170,6 +169,23 @@ mod tests {
 
     #[test]
     pub fn header_size_test() {
-        assert_eq!(*HEADER_SIZE, 10);
+        // Test first fragment
+        let fragment = FragmentHeader::new(
+            StandardHeader::default(),
+            0,
+            0,
+            AckedPacketHeader::default()
+        );
+        assert_eq!(fragment.size(), 24);
+
+        // Test subsequent fragment
+        let fragment = FragmentHeader {
+            standard_header: StandardHeader::default(),
+            sequence_num: 0,
+            id: 1,
+            num_fragments: 0,
+            packet_header: None,
+        };
+        assert_eq!(fragment.size(), 10);
     }
 }
