@@ -3,12 +3,16 @@ use crate::{
     error::{NetworkError, NetworkErrorKind, NetworkResult},
     packet::Packet,
 };
-use mio::{Evented, Poll, PollOpt, Ready, Token};
+use mio::{Evented, Poll, PollOpt, Ready, Token, Events};
 use std::{
     self,
     io::{self, Error, ErrorKind},
     net::{SocketAddr, ToSocketAddrs},
+    sync::mpsc,
+    time::Duration
 };
+
+const RECEIVER: Token = Token(0);
 
 /// An RUDP socket implementation with configurable reliability and ordering guarantees.
 pub struct RudpSocket {
@@ -16,32 +20,50 @@ pub struct RudpSocket {
     config: SocketConfig,
     //    connections: ActiveConnections,
     receive_buffer: Vec<u8>,
+    packet_sender: mpsc::Sender<Packet>,
 }
 
 impl RudpSocket {
     ///
     ///
-    pub fn bind<A: ToSocketAddrs>(addresses: A, config: SocketConfig) -> NetworkResult<Self> {
+    pub fn bind<A: ToSocketAddrs>(
+        addresses: A,
+        config: SocketConfig,
+    ) -> NetworkResult<(Self, mpsc::Receiver<Packet>)> {
         let socket = std::net::UdpSocket::bind(addresses)?;
         let socket = mio::net::UdpSocket::from_socket(socket)?;
         let buffer_size = config.receive_buffer_size;
         Ok(Self::new(socket, config, vec![0; buffer_size]))
     }
 
-    ///
-    ///
-    pub fn local_addr(&self) -> io::Result<SocketAddr> {
-        self.socket.local_addr()
+    pub fn run(&mut self) {
+        let poll = Poll::new().unwrap();
+
+        poll.register(self, RECEIVER, Ready::readable(), PollOpt::edge())
+            .unwrap();
+
+        let mut events = Events::with_capacity(128);
+
+        loop {
+            // TODO: Check for idle connections here.
+            poll.poll(&mut events, Some(Duration::from_millis(100)))
+                .unwrap();
+            for event in events.iter() {
+                match event.token() {
+                    RECEIVER => {
+                        let packet = self.recv().unwrap();
+                        self.packet_sender.send(packet);
+                    }
+                    _ => unreachable!(),
+                }
+            }
+        }
     }
 
     ///
     ///
-    pub fn try_clone(&self) -> io::Result<Self> {
-        self.socket.try_clone().map(|s| Self {
-            socket: s,
-            config: self.config.clone(),
-            receive_buffer: vec![0; self.config.receive_buffer_size],
-        })
+    pub fn local_addr(&self) -> io::Result<SocketAddr> {
+        self.socket.local_addr()
     }
 
     ///
@@ -63,12 +85,21 @@ impl RudpSocket {
         }
     }
 
-    fn new(socket: mio::net::UdpSocket, config: SocketConfig, receive_buffer: Vec<u8>) -> Self {
-        Self {
-            socket,
-            config,
-            receive_buffer,
-        }
+    fn new(
+        socket: mio::net::UdpSocket,
+        config: SocketConfig,
+        receive_buffer: Vec<u8>,
+    ) -> (Self, mpsc::Receiver<Packet>) {
+        let (packet_sender, packet_receiver) = mpsc::channel();
+        (
+            Self {
+                socket,
+                config,
+                receive_buffer,
+                packet_sender,
+            },
+            packet_receiver,
+        )
     }
 }
 
