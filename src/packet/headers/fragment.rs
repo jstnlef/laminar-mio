@@ -174,7 +174,7 @@ mod tests {
             StandardHeader::default(),
             0,
             0,
-            AckedPacketHeader::default()
+            AckedPacketHeader::default(),
         );
         assert_eq!(fragment.size(), 24);
 

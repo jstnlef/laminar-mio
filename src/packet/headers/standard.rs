@@ -53,7 +53,7 @@ impl HeaderReader for StandardHeader {
     type Header = NetworkResult<StandardHeader>;
 
     fn read(rdr: &mut Cursor<&[u8]>) -> Self::Header {
-        let protocol_version = rdr.read_u32::<BigEndian>()?; /* protocol id */
+        let protocol_version = rdr.read_u32::<BigEndian>()?;
         let packet_id = rdr.read_u8()?;
         let delivery_method_id = rdr.read_u8()?;
 

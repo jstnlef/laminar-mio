@@ -18,6 +18,10 @@ impl NetworkError {
     pub fn new(kind: NetworkErrorKind) -> Self {
         Self { kind }
     }
+
+    pub fn kind(&self) -> &NetworkErrorKind {
+        &self.kind
+    }
 }
 
 impl Display for NetworkError {

@@ -32,6 +32,6 @@ pub trait HeaderReader {
 /// Small helper method to statically calculate the written size of a header struct
 fn calc_header_size<T: Default + HeaderWriter>() -> u8 {
     let mut buffer: Vec<u8> = Vec::new();
-    T::default().write(&mut buffer);
+    let _ = T::default().write(&mut buffer);
     buffer.len() as u8
 }

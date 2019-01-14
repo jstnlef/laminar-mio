@@ -3,7 +3,7 @@ use crate::{
     error::{NetworkError, NetworkErrorKind, NetworkResult},
     packet::Packet,
 };
-use mio::Token;
+use mio::{Evented, Poll, PollOpt, Ready, Token};
 use std::{
     self,
     io::{self, Error, ErrorKind},
@@ -21,7 +21,7 @@ pub struct RudpSocket {
 impl RudpSocket {
     ///
     ///
-    pub fn bind<A: ToSocketAddrs>(addresses: A, config: SocketConfig) -> io::Result<Self> {
+    pub fn bind<A: ToSocketAddrs>(addresses: A, config: SocketConfig) -> NetworkResult<Self> {
         let socket = std::net::UdpSocket::bind(addresses)?;
         let socket = mio::net::UdpSocket::from_socket(socket)?;
         let buffer_size = config.receive_buffer_size;
@@ -69,5 +69,31 @@ impl RudpSocket {
             config,
             receive_buffer,
         }
+    }
+}
+
+impl Evented for RudpSocket {
+    fn register(
+        &self,
+        poll: &Poll,
+        token: Token,
+        interest: Ready,
+        opts: PollOpt,
+    ) -> io::Result<()> {
+        self.socket.register(poll, token, interest, opts)
+    }
+
+    fn reregister(
+        &self,
+        poll: &Poll,
+        token: Token,
+        interest: Ready,
+        opts: PollOpt,
+    ) -> io::Result<()> {
+        self.socket.reregister(poll, token, interest, opts)
+    }
+
+    fn deregister(&self, poll: &Poll) -> io::Result<()> {
+        self.socket.deregister(poll)
     }
 }
