@@ -7,7 +7,7 @@ pub enum PacketType {
     Normal(AckedPacketHeader),
     /// Part of an packet also called 'fragment' containing fragment info.
     Fragment(FragmentHeader),
-    /// Packet to keep the connection alive.
+    /// Packet to keep the net.connection alive.
     HeartBeat {/* fields ... */},
     /// Disconnect request
     Disconnect {/* fields ... */},

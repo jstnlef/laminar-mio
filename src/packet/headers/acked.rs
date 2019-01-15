@@ -95,7 +95,7 @@ impl HeaderReader for AckedPacketHeader {
 
 #[cfg(test)]
 mod tests {
-    use super::{AckedPacketHeader, HeaderReader, HeaderWriter, StandardHeader, HEADER_SIZE};
+    use super::{AckedPacketHeader, HeaderReader, HeaderWriter, StandardHeader};
     use std::io::Cursor;
 
     #[test]

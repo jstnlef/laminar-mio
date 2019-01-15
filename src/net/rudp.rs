@@ -1,16 +1,15 @@
 use crate::{
     config::SocketConfig,
-    net::connection::ActiveConnections,
     error::{NetworkError, NetworkErrorKind, NetworkResult},
+    net::{connection::ActiveConnections, events::SocketEvent},
     packet::Packet,
 };
 use mio::{Evented, Events, Poll, PollOpt, Ready, Token};
 use std::{
     self,
-    io::{self, Error, ErrorKind},
+    io::{self},
     net::{SocketAddr, ToSocketAddrs},
-    sync::mpsc,
-    time::Duration,
+    sync::mpsc
 };
 
 const RECEIVER: Token = Token(0);
@@ -22,8 +21,7 @@ pub struct RudpSocket {
     config: SocketConfig,
     connections: ActiveConnections,
     receive_buffer: Vec<u8>,
-    packet_sender: mpsc::Sender<Packet>,
-
+    event_sender: mpsc::Sender<SocketEvent>,
     // TODO: Have a send buffer for packets. When the caller wants to send a packet, the packet will
     // get placed in this buffer. Then, when the socket is ready to send, send all of the buffered
     // packets at once.
@@ -35,11 +33,10 @@ impl RudpSocket {
     pub fn bind<A: ToSocketAddrs>(
         addresses: A,
         config: SocketConfig,
-    ) -> NetworkResult<(Self, mpsc::Receiver<Packet>)> {
+    ) -> NetworkResult<(Self, mpsc::Receiver<SocketEvent>)> {
         let socket = std::net::UdpSocket::bind(addresses)?;
         let socket = mio::net::UdpSocket::from_socket(socket)?;
-        let buffer_size = config.receive_buffer_size;
-        Ok(Self::new(socket, config, vec![0; buffer_size]))
+        Ok(Self::new(socket, config))
     }
 
     /// Entry point to the run loop. This should run in a spawned thread since calls to `poll.poll`
@@ -48,14 +45,24 @@ impl RudpSocket {
         let poll = Poll::new()?;
 
         poll.register(self, RECEIVER, Ready::readable(), PollOpt::edge())?;
-//        poll.register(self, SENDER, Ready::writable(), PollOpt::edge())?;
 
         let mut events = Events::with_capacity(self.config.socket_event_buffer_size);
         let events_ref = &mut events;
         loop {
-            // TODO: Check for idle connections here.
+            self.handle_idle_clients();
             poll.poll(events_ref, self.config.socket_polling_timeout)?;
             self.process_events(events_ref)?;
+        }
+    }
+
+    fn handle_idle_clients(&mut self) {
+        let idle_addresses = self
+            .connections
+            .idle_connections(self.config.idle_connection_timeout);
+
+        for address in idle_addresses {
+            self.connections.remove_connection(&address);
+            self.event_sender.send(SocketEvent::TimeOut(address));
         }
     }
 
@@ -64,11 +71,8 @@ impl RudpSocket {
             match event.token() {
                 RECEIVER => {
                     let packet = self.recv()?;
-                    self.packet_sender.send(packet);
-                },
-//                SENDER => {
-//
-//                }
+                    self.event_sender.send(SocketEvent::Packet(packet));
+                }
                 _ => unreachable!(),
             }
         }
@@ -93,6 +97,7 @@ impl RudpSocket {
         let (recv_len, address) = self.socket.recv_from(&mut self.receive_buffer)?;
         if recv_len > 0 {
             let payload = &self.receive_buffer[..recv_len];
+            let connection = self.connections.get_or_insert_connection(&address);
             // XXX: Does an allocation to copy the bytes into packet. Maybe it shouldn't?
             Ok(Packet::unreliable(address, payload.to_owned()))
         } else {
@@ -103,18 +108,18 @@ impl RudpSocket {
     fn new(
         socket: mio::net::UdpSocket,
         config: SocketConfig,
-        receive_buffer: Vec<u8>,
-    ) -> (Self, mpsc::Receiver<Packet>) {
-        let (packet_sender, packet_receiver) = mpsc::channel();
+    ) -> (Self, mpsc::Receiver<SocketEvent>) {
+        let (event_sender, event_receiver) = mpsc::channel();
+        let buffer_size = config.receive_buffer_size;
         (
             Self {
                 socket,
                 config,
                 connections: ActiveConnections::new(),
-                receive_buffer,
-                packet_sender,
+                receive_buffer: vec![0; buffer_size],
+                event_sender,
             },
-            packet_receiver,
+            event_receiver,
         )
     }
 }

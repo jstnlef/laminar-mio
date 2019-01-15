@@ -22,7 +22,7 @@ impl Display for NetworkErrorKind {
             NetworkErrorKind::IOError(e) => write!(f, "An IO Error occurred. Reason: {:?}.", e),
             NetworkErrorKind::ReceivedDataToShort => {
                 write!(f, "The received data did not have any length.")
-            },
+            }
         }
     }
 }
