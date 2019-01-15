@@ -1,26 +1,32 @@
 use crate::{
     config::SocketConfig,
+    net::connection::ActiveConnections,
     error::{NetworkError, NetworkErrorKind, NetworkResult},
     packet::Packet,
 };
-use mio::{Evented, Poll, PollOpt, Ready, Token, Events};
+use mio::{Evented, Events, Poll, PollOpt, Ready, Token};
 use std::{
     self,
     io::{self, Error, ErrorKind},
     net::{SocketAddr, ToSocketAddrs},
     sync::mpsc,
-    time::Duration
+    time::Duration,
 };
 
 const RECEIVER: Token = Token(0);
+const SENDER: Token = Token(1);
 
 /// An RUDP socket implementation with configurable reliability and ordering guarantees.
 pub struct RudpSocket {
     socket: mio::net::UdpSocket,
     config: SocketConfig,
-    //    connections: ActiveConnections,
+    connections: ActiveConnections,
     receive_buffer: Vec<u8>,
     packet_sender: mpsc::Sender<Packet>,
+
+    // TODO: Have a send buffer for packets. When the caller wants to send a packet, the packet will
+    // get placed in this buffer. Then, when the socket is ready to send, send all of the buffered
+    // packets at once.
 }
 
 impl RudpSocket {
@@ -36,28 +42,37 @@ impl RudpSocket {
         Ok(Self::new(socket, config, vec![0; buffer_size]))
     }
 
-    pub fn run(&mut self) {
-        let poll = Poll::new().unwrap();
+    /// Entry point to the run loop. This should run in a spawned thread since calls to `poll.poll`
+    /// are blocking.
+    pub fn start_polling(&mut self) -> NetworkResult<()> {
+        let poll = Poll::new()?;
 
-        poll.register(self, RECEIVER, Ready::readable(), PollOpt::edge())
-            .unwrap();
+        poll.register(self, RECEIVER, Ready::readable(), PollOpt::edge())?;
+//        poll.register(self, SENDER, Ready::writable(), PollOpt::edge())?;
 
-        let mut events = Events::with_capacity(128);
-
+        let mut events = Events::with_capacity(self.config.socket_event_buffer_size);
+        let events_ref = &mut events;
         loop {
             // TODO: Check for idle connections here.
-            poll.poll(&mut events, Some(Duration::from_millis(100)))
-                .unwrap();
-            for event in events.iter() {
-                match event.token() {
-                    RECEIVER => {
-                        let packet = self.recv().unwrap();
-                        self.packet_sender.send(packet);
-                    }
-                    _ => unreachable!(),
-                }
+            poll.poll(events_ref, self.config.socket_polling_timeout)?;
+            self.process_events(events_ref)?;
+        }
+    }
+
+    fn process_events(&mut self, events: &mut Events) -> NetworkResult<()> {
+        for event in events.iter() {
+            match event.token() {
+                RECEIVER => {
+                    let packet = self.recv()?;
+                    self.packet_sender.send(packet);
+                },
+//                SENDER => {
+//
+//                }
+                _ => unreachable!(),
             }
         }
+        Ok(())
     }
 
     ///
@@ -95,6 +110,7 @@ impl RudpSocket {
             Self {
                 socket,
                 config,
+                connections: ActiveConnections::new(),
                 receive_buffer,
                 packet_sender,
             },
