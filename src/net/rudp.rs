@@ -97,7 +97,8 @@ impl RudpSocket {
         let (recv_len, address) = self.socket.recv_from(&mut self.receive_buffer)?;
         if recv_len > 0 {
             let payload = &self.receive_buffer[..recv_len];
-            let connection = self.connections.get_or_insert_connection(&address);
+            let mut connection = self.connections.get_or_insert_connection(&address);
+            connection.packet_received();
             // XXX: Does an allocation to copy the bytes into packet. Maybe it shouldn't?
             Ok(Packet::unreliable(address, payload.to_owned()))
         } else {

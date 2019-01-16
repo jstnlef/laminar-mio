@@ -4,6 +4,8 @@ use self::virtual_connection::VirtualConnection;
 
 use std::{collections::HashMap, net::SocketAddr, time::Duration};
 
+///
+///
 pub struct ActiveConnections {
     connections: HashMap<SocketAddr, VirtualConnection>,
 }
@@ -17,13 +19,13 @@ impl ActiveConnections {
 
     /// Try to get a VirtualConnection by address. If the connection does not exist, it will be
     /// inserted and returned.
-    pub fn get_or_insert_connection(&mut self, address: &SocketAddr) -> &VirtualConnection {
+    pub fn get_or_insert_connection(&mut self, address: &SocketAddr) -> &mut VirtualConnection {
         if !self.connections.contains_key(address) {
             self.connections
                 .insert(*address, VirtualConnection::new(*address));
         }
         self.connections
-            .get(address)
+            .get_mut(address)
             .expect("We just added this key")
     }
 

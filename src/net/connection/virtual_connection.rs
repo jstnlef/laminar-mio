@@ -20,6 +20,11 @@ impl VirtualConnection {
         }
     }
 
+    /// Updates the last packet time.
+    pub fn packet_received(&mut self) {
+        self.last_packet_time = Instant::now();
+    }
+
     /// Represents the duration since we last received a packet from this client
     pub fn time_since_last_packet(&self) -> Duration {
         let now = Instant::now();

@@ -17,7 +17,7 @@ pub struct AckedPacketHeader {
     sequence_num: u16,
     // this is the last acknowledged sequence number.
     last_acked: u16,
-    // this is an bitfield of all last 32 acknowledged packages
+    // this is a bitfield of all last 32 acknowledged packages
     ack_field: u32,
 }
 
