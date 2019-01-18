@@ -10,3 +10,4 @@ pub mod error;
 pub mod net;
 
 mod packet;
+pub use self::packet::Packet;

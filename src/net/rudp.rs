@@ -6,14 +6,12 @@ use crate::{
 };
 use mio::{Evented, Events, Poll, PollOpt, Ready, Token};
 use std::{
-    self,
-    io::{self},
+    self, io,
     net::{SocketAddr, ToSocketAddrs},
-    sync::mpsc
+    sync::mpsc,
 };
 
-const RECEIVER: Token = Token(0);
-const SENDER: Token = Token(1);
+const SOCKET: Token = Token(0);
 
 /// An RUDP socket implementation with configurable reliability and ordering guarantees.
 pub struct RudpSocket {
@@ -22,9 +20,7 @@ pub struct RudpSocket {
     connections: ActiveConnections,
     receive_buffer: Vec<u8>,
     event_sender: mpsc::Sender<SocketEvent>,
-    // TODO: Have a send buffer for packets. When the caller wants to send a packet, the packet will
-    // get placed in this buffer. Then, when the socket is ready to send, send all of the buffered
-    // packets at once.
+    packet_receiver: mpsc::Receiver<Packet>
 }
 
 impl RudpSocket {
@@ -33,7 +29,7 @@ impl RudpSocket {
     pub fn bind<A: ToSocketAddrs>(
         addresses: A,
         config: SocketConfig,
-    ) -> NetworkResult<(Self, mpsc::Receiver<SocketEvent>)> {
+    ) -> NetworkResult<(Self, mpsc::Sender<Packet>, mpsc::Receiver<SocketEvent>)> {
         let socket = std::net::UdpSocket::bind(addresses)?;
         let socket = mio::net::UdpSocket::from_socket(socket)?;
         Ok(Self::new(socket, config))
@@ -44,7 +40,7 @@ impl RudpSocket {
     pub fn start_polling(&mut self) -> NetworkResult<()> {
         let poll = Poll::new()?;
 
-        poll.register(self, RECEIVER, Ready::readable(), PollOpt::edge())?;
+        poll.register(self, SOCKET, Ready::readable(), PollOpt::edge())?;
 
         let mut events = Events::with_capacity(self.config.socket_event_buffer_size);
         let events_ref = &mut events;
@@ -52,6 +48,10 @@ impl RudpSocket {
             self.handle_idle_clients();
             poll.poll(events_ref, self.config.socket_polling_timeout)?;
             self.process_events(events_ref)?;
+            // XXX: I'm fairly certain this isn't exactly safe. Worth some more research.
+            for packet in self.packet_receiver.try_iter() {
+                self.send_to_socket(packet)?;
+            }
         }
     }
 
@@ -69,9 +69,16 @@ impl RudpSocket {
     fn process_events(&mut self, events: &mut Events) -> NetworkResult<()> {
         for event in events.iter() {
             match event.token() {
-                RECEIVER => {
-                    let packet = self.recv()?;
-                    self.event_sender.send(SocketEvent::Packet(packet));
+                SOCKET => {
+                    if event.readiness().is_readable() {
+                        loop {
+                            match self.recv_from_socket() {
+                                Ok(packet) => self.event_sender.send(SocketEvent::Packet(packet)),
+                                Err(ref err) if err.kind() == io::ErrorKind::WouldBlock => break,
+                                err => Ok(())
+                            };
+                        }
+                    }
                 }
                 _ => unreachable!(),
             }
@@ -81,36 +88,38 @@ impl RudpSocket {
 
     ///
     ///
-    pub fn local_addr(&self) -> io::Result<SocketAddr> {
-        self.socket.local_addr()
+    pub fn local_addr(&self) -> NetworkResult<SocketAddr> {
+        self.socket.local_addr().map_err(|e| e.into())
     }
 
     ///
     ///
-    pub fn send(&self, packet: Packet) -> io::Result<usize> {
+    fn send_to_socket(&self, packet: Packet) -> io::Result<usize> {
         self.socket.send_to(packet.payload(), &packet.address())
     }
 
     ///
     ///
-    pub fn recv(&mut self) -> NetworkResult<Packet> {
+    fn recv_from_socket(&mut self) -> io::Result<Packet> {
         let (recv_len, address) = self.socket.recv_from(&mut self.receive_buffer)?;
-        if recv_len > 0 {
+//        if recv_len > 0 {
             let payload = &self.receive_buffer[..recv_len];
             let mut connection = self.connections.get_or_insert_connection(&address);
             connection.packet_received();
             // XXX: Does an allocation to copy the bytes into packet. Maybe it shouldn't?
             Ok(Packet::unreliable(address, payload.to_owned()))
-        } else {
-            Err(NetworkError::new(NetworkErrorKind::ReceivedDataToShort))
-        }
+//        }
+//        else {
+//            Err(NetworkError::new(NetworkErrorKind::ReceivedDataToShort))
+//        }
     }
 
     fn new(
         socket: mio::net::UdpSocket,
         config: SocketConfig,
-    ) -> (Self, mpsc::Receiver<SocketEvent>) {
+    ) -> (Self, mpsc::Sender<Packet>, mpsc::Receiver<SocketEvent>) {
         let (event_sender, event_receiver) = mpsc::channel();
+        let (packet_sender, packet_receiver) = mpsc::channel();
         let buffer_size = config.receive_buffer_size;
         (
             Self {
@@ -119,8 +128,10 @@ impl RudpSocket {
                 connections: ActiveConnections::new(),
                 receive_buffer: vec![0; buffer_size],
                 event_sender,
+                packet_receiver
             },
-            event_receiver,
+            packet_sender,
+            event_receiver
         )
     }
 }

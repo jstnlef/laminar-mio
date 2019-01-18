@@ -62,7 +62,7 @@ impl HeaderReader for HeartBeatHeader {
 
 #[cfg(test)]
 mod tests {
-    use super::{HeaderReader, HeaderWriter, HeartBeatHeader};
+    use super::{HeaderReader, HeartBeatHeader};
 
     #[test]
     pub fn header_size_test() {

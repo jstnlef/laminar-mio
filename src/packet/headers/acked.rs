@@ -12,7 +12,7 @@ lazy_static! {
 #[derive(Copy, Clone, Debug)]
 pub struct AckedPacketHeader {
     /// StandardHeader for the Acked Packet
-    pub standard_header: StandardHeader,
+    standard_header: StandardHeader,
     /// this is the sequence number so that we can know where in the sequence of packages this packet belongs.
     sequence_num: u16,
     // this is the last acknowledged sequence number.

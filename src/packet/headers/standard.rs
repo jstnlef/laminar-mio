@@ -15,11 +15,11 @@ lazy_static! {
 #[derive(Copy, Clone, Debug)]
 pub struct StandardHeader {
     /// crc32 of the protocol version.
-    pub protocol_version: u32,
+    protocol_version: u32,
     /// specifies the packet type.
-    pub packet_type_id: PacketTypeId,
+    packet_type_id: PacketTypeId,
     /// specifies how this packet should be processed.
-    pub delivery_method: DeliveryMethod,
+    delivery_method: DeliveryMethod,
 }
 
 impl StandardHeader {
@@ -74,7 +74,7 @@ impl HeaderReader for StandardHeader {
 
 #[cfg(test)]
 mod tests {
-    use super::{HeaderReader, HeaderWriter, StandardHeader, HEADER_SIZE};
+    use super::{HeaderReader, HeaderWriter, StandardHeader};
     use crate::net::DeliveryMethod;
     use crate::packet::PacketTypeId;
     use crate::protocol_version::ProtocolVersion;

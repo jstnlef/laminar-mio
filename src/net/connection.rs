@@ -54,7 +54,7 @@ impl ActiveConnections {
 
 #[cfg(test)]
 mod tests {
-    use super::{ActiveConnections};
+    use super::ActiveConnections;
     use std::{thread, time::Duration};
 
     const ADDRESS: &str = "127.0.0.1:12345";
