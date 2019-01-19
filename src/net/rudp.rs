@@ -24,12 +24,13 @@ pub struct RudpSocket {
 }
 
 impl RudpSocket {
-    ///
-    ///
+    /// Binds to the socket and then sets up `ActiveConnections` to manage the "connections".
+    /// Because UDP connections are not persistent, we can only infer the status of the remote
+    /// endpoint by looking to see if they are still sending packets or not
     pub fn bind<A: ToSocketAddrs>(
         addresses: A,
         config: SocketConfig,
-    ) -> NetworkResult<(Self, mpsc::Sender<Packet>, mpsc::Receiver<SocketEvent>)> {
+    ) -> io::Result<(Self, mpsc::Sender<Packet>, mpsc::Receiver<SocketEvent>)> {
         let socket = std::net::UdpSocket::bind(addresses)?;
         let socket = mio::net::UdpSocket::from_socket(socket)?;
         Ok(Self::new(socket, config))
@@ -37,7 +38,7 @@ impl RudpSocket {
 
     /// Entry point to the run loop. This should run in a spawned thread since calls to `poll.poll`
     /// are blocking.
-    pub fn start_polling(&mut self) -> NetworkResult<()> {
+    pub fn start_polling(&mut self) -> io::Result<()> {
         let poll = Poll::new()?;
 
         poll.register(self, SOCKET, Ready::readable(), PollOpt::edge())?;
@@ -48,13 +49,19 @@ impl RudpSocket {
             self.handle_idle_clients();
             poll.poll(events_ref, self.config.socket_polling_timeout)?;
             self.process_events(events_ref)?;
-            // XXX: I'm fairly certain this isn't exactly safe. Worth some more research.
+            // XXX: I'm fairly certain this isn't exactly safe. I'll likely need to add some
+            // handling for when the socket is blocked on send. Worth some more research.
+            // Alternatively, I'm sure the Tokio single threaded runtime does handle this for us
+            // so maybe it's work switching to that while providing the same interface?
             for packet in self.packet_receiver.try_iter() {
                 self.send_to_socket(packet)?;
             }
         }
     }
 
+    /// Iterate through all of the idle connections based on `idle_connection_timeout` config and
+    /// remove them from the active connections. For each connection removed, we will send a
+    /// `SocketEvent::TimeOut` event to the `event_sender` channel.
     fn handle_idle_clients(&mut self) {
         let idle_addresses = self
             .connections
@@ -66,16 +73,19 @@ impl RudpSocket {
         }
     }
 
-    fn process_events(&mut self, events: &mut Events) -> NetworkResult<()> {
+    /// Process events received from the mio socket.
+    fn process_events(&mut self, events: &mut Events) -> io::Result<()> {
         for event in events.iter() {
             match event.token() {
                 SOCKET => {
                     if event.readiness().is_readable() {
                         loop {
                             match self.recv_from_socket() {
-                                Ok(packet) => self.event_sender.send(SocketEvent::Packet(packet)),
+                                Ok(Some(packet)) => self.event_sender.send(SocketEvent::Packet(packet)),
                                 Err(ref err) if err.kind() == io::ErrorKind::WouldBlock => break,
-                                err => Ok(())
+                                // This covers the Ok(None) case which means we should keep looking
+                                // to receive data from the socket.
+                                _ => continue
                             };
                         }
                     }
@@ -86,32 +96,22 @@ impl RudpSocket {
         Ok(())
     }
 
-    ///
-    ///
-    pub fn local_addr(&self) -> NetworkResult<SocketAddr> {
-        self.socket.local_addr().map_err(|e| e.into())
+    /// Returns the socket address that this socket was created from.
+    pub fn local_addr(&self) -> io::Result<SocketAddr> {
+        self.socket.local_addr()
     }
 
-    ///
-    ///
+    /// Serializes and sends a `Packet` on the socket. On success, returns the number of bytes written.
     fn send_to_socket(&self, packet: Packet) -> io::Result<usize> {
         self.socket.send_to(packet.payload(), &packet.address())
     }
 
-    ///
-    ///
-    fn recv_from_socket(&mut self) -> io::Result<Packet> {
+    /// Receives a single message from the socket. On success, returns the packet containing origin and data.
+    fn recv_from_socket(&mut self) -> io::Result<Option<Packet>> {
         let (recv_len, address) = self.socket.recv_from(&mut self.receive_buffer)?;
-//        if recv_len > 0 {
-            let payload = &self.receive_buffer[..recv_len];
-            let mut connection = self.connections.get_or_insert_connection(&address);
-            connection.packet_received();
-            // XXX: Does an allocation to copy the bytes into packet. Maybe it shouldn't?
-            Ok(Packet::unreliable(address, payload.to_owned()))
-//        }
-//        else {
-//            Err(NetworkError::new(NetworkErrorKind::ReceivedDataToShort))
-//        }
+        let payload = &self.receive_buffer[..recv_len];
+        let connection = self.connections.get_or_insert_connection(&address);
+        connection.process_incoming(payload)
     }
 
     fn new(

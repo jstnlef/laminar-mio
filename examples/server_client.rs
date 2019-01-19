@@ -38,6 +38,9 @@ fn server() -> Result<(), NetworkError> {
                     "Copy that!".as_bytes().to_vec(),
                 )).unwrap();
             }
+            SocketEvent::TimeOut(address) => {
+                println!("Client timed out: {}", address);
+            }
             _ => {}
         }
     }

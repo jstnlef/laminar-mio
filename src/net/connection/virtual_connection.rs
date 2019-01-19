@@ -1,5 +1,7 @@
+use crate::Packet;
 use std::{
     fmt,
+    io,
     net::SocketAddr,
     time::{Duration, Instant},
 };
@@ -20,9 +22,15 @@ impl VirtualConnection {
         }
     }
 
-    /// Updates the last packet time.
-    pub fn packet_received(&mut self) {
+    /// This process the incoming data and returns an packet if the data is complete.
+    ///
+    /// Returns `Ok(None)`:
+    /// 1. In the case of fragmentation and not all fragments are received
+    /// 2. In the case of the packet being queued for ordering and we are waiting on older packets first.
+    pub fn process_incoming(&mut self, payload: &[u8]) -> io::Result<Option<Packet>> {
         self.last_packet_time = Instant::now();
+//        Ok(None)
+        Ok(Some(Packet::reliable_unordered(self.remote_address, payload.to_owned())))
     }
 
     /// Represents the duration since we last received a packet from this client

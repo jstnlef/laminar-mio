@@ -16,7 +16,7 @@ pub struct SocketConfig {
 impl Default for SocketConfig {
     fn default() -> Self {
         Self {
-            idle_connection_timeout: Duration::from_millis(1000),
+            idle_connection_timeout: Duration::from_secs(5),
             receive_buffer_size: 1500,
             socket_event_buffer_size: 1024,
             socket_polling_timeout: Some(Duration::from_millis(100)),
