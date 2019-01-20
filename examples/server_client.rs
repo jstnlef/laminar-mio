@@ -1,11 +1,10 @@
 //! Note that the terms "client" and "server" here are purely what we logically associate with them.
 //! Technically, they both work the same.
 //! Note that in practice you don't want to implement a chat client using UDP.
-use std::io::stdin;
+use std::{io, io::stdin};
 
 use laminar::{
     config::SocketConfig,
-    error::NetworkError,
     net::{RudpSocket, SocketEvent},
     Packet,
 };
@@ -13,7 +12,7 @@ use std::thread;
 
 const SERVER: &str = "127.0.0.1:12351";
 
-fn server() -> Result<(), NetworkError> {
+fn server() -> Result<(), io::Error> {
     let (mut socket, packet_sender, event_receiver) =
         RudpSocket::bind(SERVER, SocketConfig::default())?;
     let _thread = thread::spawn(move || socket.start_polling());
@@ -51,10 +50,10 @@ fn server() -> Result<(), NetworkError> {
     Ok(())
 }
 
-fn client() -> Result<(), NetworkError> {
+fn client() -> Result<(), io::Error> {
     let (mut socket, packet_sender, event_receiver) =
         RudpSocket::bind("127.0.0.1:12352", SocketConfig::default())?;
-    println!("Connected on {}", socket.local_addr().unwrap());
+    println!("Connected on {}", socket.local_addr()?);
     let _thread = thread::spawn(move || socket.start_polling());
 
     let server = SERVER.parse().unwrap();
@@ -96,7 +95,7 @@ fn client() -> Result<(), NetworkError> {
     Ok(())
 }
 
-fn main() -> Result<(), NetworkError> {
+fn main() -> Result<(), io::Error> {
     let stdin = stdin();
 
     println!("Please type in `server` or `client`.");

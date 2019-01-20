@@ -1,5 +1,5 @@
 /// Contains code dealing with Packet headers
-mod headers;
+pub mod headers;
 mod packet_type;
 mod serialized;
 

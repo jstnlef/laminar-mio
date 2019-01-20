@@ -21,7 +21,7 @@ impl SerializedPacket {
 
     /// Returns an iterator yielding payload fragments
     pub fn fragments(&self, fragment_size: u16) -> impl Iterator<Item = &[u8]> {
-        /// TODO: This needs to be implemented to yield out fragments based on size
+        // TODO: This needs to be implemented to yield out fragments based on size
         self.payload.chunks(fragment_size as usize)
     }
 }

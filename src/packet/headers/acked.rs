@@ -1,8 +1,7 @@
 use super::{calc_header_size, HeaderReader, HeaderWriter, StandardHeader};
-use crate::error::NetworkResult;
 use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
 use lazy_static::lazy_static;
-use std::io::Cursor;
+use std::io;
 
 lazy_static! {
     static ref HEADER_SIZE: u8 = calc_header_size::<AckedPacketHeader>();
@@ -62,7 +61,7 @@ impl Default for AckedPacketHeader {
 }
 
 impl HeaderWriter for AckedPacketHeader {
-    fn write(&self, buffer: &mut Vec<u8>) -> NetworkResult<()> {
+    fn write(&self, buffer: &mut Vec<u8>) -> io::Result<()> {
         self.standard_header.write(buffer)?;
         buffer.write_u16::<BigEndian>(self.sequence_num)?;
         buffer.write_u16::<BigEndian>(self.last_acked)?;
@@ -72,9 +71,9 @@ impl HeaderWriter for AckedPacketHeader {
 }
 
 impl HeaderReader for AckedPacketHeader {
-    type Header = NetworkResult<AckedPacketHeader>;
+    type Header = io::Result<AckedPacketHeader>;
 
-    fn read(rdr: &mut Cursor<&[u8]>) -> Self::Header {
+    fn read(rdr: &mut io::Cursor<&[u8]>) -> Self::Header {
         let standard_header = StandardHeader::read(rdr)?;
         let sequence_num = rdr.read_u16::<BigEndian>()?;
         let last_acked = rdr.read_u16::<BigEndian>()?;

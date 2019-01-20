@@ -1,11 +1,8 @@
 use super::{calc_header_size, HeaderReader, HeaderWriter};
-use crate::error::NetworkResult;
-use crate::net::DeliveryMethod;
-use crate::packet::PacketTypeId;
-use crate::protocol_version::ProtocolVersion;
+use crate::{net::DeliveryMethod, packet::PacketTypeId, protocol_version::ProtocolVersion};
 use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
 use lazy_static::lazy_static;
-use std::io::Cursor;
+use std::io;
 
 lazy_static! {
     pub static ref HEADER_SIZE: u8 = calc_header_size::<StandardHeader>();
@@ -17,19 +14,27 @@ pub struct StandardHeader {
     /// crc32 of the protocol version.
     protocol_version: u32,
     /// specifies the packet type.
-    packet_type_id: PacketTypeId,
+    packet_type: PacketTypeId,
     /// specifies how this packet should be processed.
     delivery_method: DeliveryMethod,
 }
 
 impl StandardHeader {
-    /// Create new heartbeat header.
-    pub fn new(delivery_method: DeliveryMethod, packet_type_id: PacketTypeId) -> Self {
+    /// Create new standard header.
+    pub fn new(delivery_method: DeliveryMethod, packet_type: PacketTypeId) -> Self {
         StandardHeader {
             protocol_version: ProtocolVersion::get_crc32(),
-            packet_type_id,
+            packet_type,
             delivery_method,
         }
+    }
+
+    pub fn protocol_version(&self) -> u32 {
+        self.protocol_version
+    }
+
+    pub fn packet_type(&self) -> PacketTypeId {
+        self.packet_type
     }
 }
 
@@ -40,9 +45,9 @@ impl Default for StandardHeader {
 }
 
 impl HeaderWriter for StandardHeader {
-    fn write(&self, buffer: &mut Vec<u8>) -> NetworkResult<()> {
+    fn write(&self, buffer: &mut Vec<u8>) -> io::Result<()> {
         buffer.write_u32::<BigEndian>(self.protocol_version)?;
-        buffer.write_u8(PacketTypeId::get_id(self.packet_type_id))?;
+        buffer.write_u8(PacketTypeId::get_id(self.packet_type))?;
         buffer.write_u8(DeliveryMethod::get_delivery_method_id(self.delivery_method))?;
 
         Ok(())
@@ -50,16 +55,16 @@ impl HeaderWriter for StandardHeader {
 }
 
 impl HeaderReader for StandardHeader {
-    type Header = NetworkResult<StandardHeader>;
+    type Header = io::Result<StandardHeader>;
 
-    fn read(rdr: &mut Cursor<&[u8]>) -> Self::Header {
+    fn read(rdr: &mut io::Cursor<&[u8]>) -> Self::Header {
         let protocol_version = rdr.read_u32::<BigEndian>()?;
         let packet_id = rdr.read_u8()?;
         let delivery_method_id = rdr.read_u8()?;
 
         let header = Self {
             protocol_version,
-            packet_type_id: PacketTypeId::get_packet_type(packet_id),
+            packet_type: PacketTypeId::get_packet_type(packet_id),
             delivery_method: DeliveryMethod::get_delivery_method_from_id(delivery_method_id),
         };
 
@@ -92,7 +97,7 @@ mod tests {
         assert!(ProtocolVersion::valid_version(
             packet_header.protocol_version
         ));
-        assert_eq!(packet_header.packet_type_id, PacketTypeId::Packet);
+        assert_eq!(packet_header.packet_type, PacketTypeId::Packet);
         assert_eq!(
             packet_header.delivery_method,
             DeliveryMethod::UnreliableUnordered

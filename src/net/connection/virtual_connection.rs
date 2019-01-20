@@ -1,4 +1,11 @@
-use crate::{packet::SerializedPacket, Packet};
+use crate::{
+    error::LaminarError,
+    packet::{
+        headers::{HeaderReader, StandardHeader},
+        PacketTypeId, SerializedPacket,
+    },
+    Packet, ProtocolVersion,
+};
 use std::{
     fmt, io,
     net::SocketAddr,
@@ -29,6 +36,16 @@ impl VirtualConnection {
     ///    first.
     pub fn process_incoming(&mut self, payload: &[u8]) -> io::Result<Option<Packet>> {
         self.last_packet_time = Instant::now();
+
+        let mut cursor = io::Cursor::new(payload);
+        let header = StandardHeader::read(&mut cursor)?;
+
+        if !ProtocolVersion::valid_version(header.protocol_version()) {
+            return Err(LaminarError::ProtocolVersionMismatch.into());
+        }
+
+        if header.packet_type() == PacketTypeId::Fragment {}
+
         //        Ok(None)
         Ok(Some(Packet::reliable_unordered(
             self.remote_address,

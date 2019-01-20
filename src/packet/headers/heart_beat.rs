@@ -1,10 +1,8 @@
 use super::{calc_header_size, HeaderReader, HeaderWriter};
-use crate::error::NetworkResult;
-use crate::packet::PacketTypeId;
-use crate::protocol_version::ProtocolVersion;
+use crate::{packet::PacketTypeId, protocol_version::ProtocolVersion};
 use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
 use lazy_static::lazy_static;
-use std::io::Cursor;
+use std::io;
 
 lazy_static! {
     static ref HEADER_SIZE: u8 = calc_header_size::<HeartBeatHeader>();
@@ -33,7 +31,7 @@ impl Default for HeartBeatHeader {
 }
 
 impl HeaderWriter for HeartBeatHeader {
-    fn write(&self, buffer: &mut Vec<u8>) -> NetworkResult<()> {
+    fn write(&self, buffer: &mut Vec<u8>) -> io::Result<()> {
         buffer.write_u32::<BigEndian>(ProtocolVersion::get_crc32())?;
         buffer.write_u8(PacketTypeId::get_id(self.packet_type_id))?;
 
@@ -42,9 +40,9 @@ impl HeaderWriter for HeartBeatHeader {
 }
 
 impl HeaderReader for HeartBeatHeader {
-    type Header = NetworkResult<HeartBeatHeader>;
+    type Header = io::Result<HeartBeatHeader>;
 
-    fn read(rdr: &mut Cursor<&[u8]>) -> Self::Header {
+    fn read(rdr: &mut io::Cursor<&[u8]>) -> Self::Header {
         let _ = rdr.read_u32::<BigEndian>()?;
         let _ = rdr.read_u8();
         let header = Self {

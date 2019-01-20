@@ -1,25 +1,24 @@
 mod kinds;
 
-pub use self::kinds::FragmentErrorKind;
-pub use self::kinds::NetworkErrorKind;
+pub use self::kinds::FragmentError;
+pub use self::kinds::LaminarError;
 
 use std::fmt::{self, Display, Formatter};
-use std::io;
 use std::result::Result;
 
 pub type NetworkResult<T> = Result<T, NetworkError>;
 
 #[derive(Debug)]
 pub struct NetworkError {
-    kind: NetworkErrorKind,
+    kind: LaminarError,
 }
 
 impl NetworkError {
-    pub fn new(kind: NetworkErrorKind) -> Self {
+    pub fn new(kind: LaminarError) -> Self {
         Self { kind }
     }
 
-    pub fn kind(&self) -> &NetworkErrorKind {
+    pub fn kind(&self) -> &LaminarError {
         &self.kind
     }
 }
@@ -30,20 +29,14 @@ impl Display for NetworkError {
     }
 }
 
-impl From<NetworkErrorKind> for NetworkError {
-    fn from(kind: NetworkErrorKind) -> NetworkError {
+impl From<LaminarError> for NetworkError {
+    fn from(kind: LaminarError) -> NetworkError {
         NetworkError { kind }
     }
 }
 
-impl From<FragmentErrorKind> for NetworkError {
-    fn from(inner: FragmentErrorKind) -> Self {
-        NetworkErrorKind::FragmentError(inner).into()
-    }
-}
-
-impl From<io::Error> for NetworkError {
-    fn from(inner: io::Error) -> NetworkError {
-        NetworkErrorKind::IOError(inner).into()
+impl From<FragmentError> for NetworkError {
+    fn from(inner: FragmentError) -> Self {
+        LaminarError::FragmentError(inner).into()
     }
 }

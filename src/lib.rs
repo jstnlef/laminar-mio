@@ -11,3 +11,4 @@ pub mod net;
 
 mod packet;
 pub use self::packet::Packet;
+pub use self::protocol_version::ProtocolVersion;

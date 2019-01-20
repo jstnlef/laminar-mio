@@ -19,22 +19,27 @@ pub struct SocketConfig {
 }
 
 impl SocketConfig {
+    #[inline]
     pub fn fragment_size(&self) -> u16 {
         self.fragment_size
     }
 
+    #[inline]
     pub fn idle_connection_timeout(&self) -> Duration {
         self.idle_connection_timeout
     }
 
+    #[inline]
     pub fn receive_buffer_size(&self) -> usize {
         self.receive_buffer_size
     }
 
+    #[inline]
     pub fn socket_event_buffer_size(&self) -> usize {
         self.socket_event_buffer_size
     }
 
+    #[inline]
     pub fn socket_polling_timeout(&self) -> Option<Duration> {
         self.socket_polling_timeout
     }

@@ -1,9 +1,8 @@
 use super::{calc_header_size, AckedPacketHeader, HeaderReader, HeaderWriter, StandardHeader};
-use crate::error::{FragmentErrorKind, NetworkResult};
+use crate::error::FragmentError;
 use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
 use lazy_static::lazy_static;
-use log::error;
-use std::io::Cursor;
+use std::io;
 
 lazy_static! {
     static ref HEADER_SIZE: u8 = calc_header_size::<FragmentHeader>();
@@ -70,7 +69,7 @@ impl Default for FragmentHeader {
 }
 
 impl HeaderWriter for FragmentHeader {
-    fn write(&self, buffer: &mut Vec<u8>) -> NetworkResult<()> {
+    fn write(&self, buffer: &mut Vec<u8>) -> io::Result<()> {
         self.standard_header.write(buffer)?;
         buffer.write_u16::<BigEndian>(self.sequence_num)?;
         buffer.write_u8(self.id)?;
@@ -82,7 +81,9 @@ impl HeaderWriter for FragmentHeader {
                 Some(header) => {
                     header.write(buffer)?;
                 }
-                None => return Err(FragmentErrorKind::PacketHeaderNotFound.into()),
+                None => {
+                    return Err(FragmentError::PacketHeaderNotFound.into());
+                }
             }
         }
 
@@ -91,9 +92,9 @@ impl HeaderWriter for FragmentHeader {
 }
 
 impl HeaderReader for FragmentHeader {
-    type Header = NetworkResult<FragmentHeader>;
+    type Header = io::Result<FragmentHeader>;
 
-    fn read(rdr: &mut Cursor<&[u8]>) -> Self::Header {
+    fn read(rdr: &mut io::Cursor<&[u8]>) -> Self::Header {
         let standard_header = StandardHeader::read(rdr)?;
         let sequence_num = rdr.read_u16::<BigEndian>()?;
         let id = rdr.read_u8()?;
@@ -132,9 +133,7 @@ impl HeaderReader for FragmentHeader {
 
 #[cfg(test)]
 mod tests {
-    use super::{
-        AckedPacketHeader, FragmentHeader, HeaderReader, HeaderWriter, StandardHeader, HEADER_SIZE,
-    };
+    use super::{AckedPacketHeader, FragmentHeader, HeaderReader, HeaderWriter, StandardHeader};
     use crate::net::DeliveryMethod;
     use crate::packet::PacketTypeId;
     use std::io::Cursor;

@@ -1,14 +1,11 @@
 use crate::{
     config::SocketConfig,
-    error::{NetworkError, NetworkErrorKind, NetworkResult},
     net::{connection::ActiveConnections, events::SocketEvent},
     packet::Packet,
 };
 use mio::{Evented, Events, Poll, PollOpt, Ready, Token};
 use std::{
-    self,
-    io,
-    mem,
+    self, io, mem,
     net::{SocketAddr, ToSocketAddrs},
     sync::mpsc,
 };
@@ -47,13 +44,12 @@ impl RudpSocket {
 
         let mut events = Events::with_capacity(self.config.socket_event_buffer_size());
         let events_ref = &mut events;
-        let packet_receiver = &mut mpsc::channel().1;
+        // Packet receiver must only be used in this method.
+        let packet_receiver = mem::replace(&mut self.packet_receiver, mpsc::channel().1);
         loop {
             self.handle_idle_clients();
             poll.poll(events_ref, self.config.socket_polling_timeout())?;
             self.process_events(events_ref)?;
-
-            mem::swap(&mut self.packet_receiver, packet_receiver);
             // XXX: I'm fairly certain this isn't exactly safe. I'll likely need to add some
             // handling for when the socket is blocked on send. Worth some more research.
             // Alternatively, I'm sure the Tokio single threaded runtime does handle this for us
@@ -61,9 +57,9 @@ impl RudpSocket {
             for packet in packet_receiver.try_iter() {
                 self.send_to_socket(packet)?;
             }
-
-            mem::swap(&mut self.packet_receiver, packet_receiver);
         }
+        mem::replace(&mut self.packet_receiver, packet_receiver);
+        Ok(())
     }
 
     /// Iterate through all of the idle connections based on `idle_connection_timeout` config and
@@ -93,9 +89,10 @@ impl RudpSocket {
                                 }
                                 Ok(None) => continue,
                                 Err(ref err) if err.kind() == io::ErrorKind::WouldBlock => break,
-                                // TODO: Figure out what to do when we can a legitimate error
-                                // when receiving data from the socket.
-                                _ => continue,
+                                Err(e) => {
+                                    eprintln!("{:?}", e);
+                                    continue;
+                                }
                             };
                         }
                     }

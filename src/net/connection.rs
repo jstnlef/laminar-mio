@@ -2,11 +2,7 @@ mod virtual_connection;
 
 use self::virtual_connection::VirtualConnection;
 
-use std::{
-    collections::HashMap,
-    net::SocketAddr,
-    time::Duration
-};
+use std::{collections::HashMap, net::SocketAddr, time::Duration};
 
 ///
 ///
