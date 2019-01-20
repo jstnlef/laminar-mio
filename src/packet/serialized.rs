@@ -10,7 +10,7 @@ impl SerializedPacket {
     pub fn new(address: SocketAddr) -> Self {
         Self {
             address,
-            payload: vec![],
+            payload: vec![65, 66, 67],
         }
     }
 
@@ -20,8 +20,8 @@ impl SerializedPacket {
     }
 
     /// Returns an iterator yielding payload fragments
-    pub fn fragments(&self) -> impl Iterator<Item = &[u8]> {
+    pub fn fragments(&self, fragment_size: usize) -> impl Iterator<Item = &[u8]> {
         /// TODO: This needs to be implemented to yield out fragments based on size
-        self.payload.chunks(self.payload.len())
+        self.payload.chunks(fragment_size)
     }
 }

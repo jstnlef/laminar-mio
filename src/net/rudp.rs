@@ -45,12 +45,12 @@ impl RudpSocket {
 
         poll.register(self, SOCKET, Ready::readable(), PollOpt::edge())?;
 
-        let mut events = Events::with_capacity(self.config.socket_event_buffer_size);
+        let mut events = Events::with_capacity(self.config.socket_event_buffer_size());
         let events_ref = &mut events;
         let packet_receiver = &mut mpsc::channel().1;
         loop {
             self.handle_idle_clients();
-            poll.poll(events_ref, self.config.socket_polling_timeout)?;
+            poll.poll(events_ref, self.config.socket_polling_timeout())?;
             self.process_events(events_ref)?;
 
             mem::swap(&mut self.packet_receiver, packet_receiver);
@@ -72,7 +72,7 @@ impl RudpSocket {
     fn handle_idle_clients(&mut self) {
         let idle_addresses = self
             .connections
-            .idle_connections(self.config.idle_connection_timeout);
+            .idle_connections(self.config.idle_connection_timeout());
 
         for address in idle_addresses {
             self.connections.remove_connection(&address);
@@ -117,11 +117,13 @@ impl RudpSocket {
         let serialized = connection.process_outgoing(packet)?;
         let mut bytes_written = 0;
 
-        for fragment in serialized.fragments() {
+        for fragment in serialized.fragments(self.config.fragment_size() as usize) {
             bytes_written += self.socket.send_to(fragment, &serialized.address())?;
         }
 
         // TODO: Might need to do something with dropped packets here?
+
+        dbg!(bytes_written);
 
         Ok(bytes_written)
     }
@@ -140,7 +142,7 @@ impl RudpSocket {
     ) -> (Self, mpsc::Sender<Packet>, mpsc::Receiver<SocketEvent>) {
         let (event_sender, event_receiver) = mpsc::channel();
         let (packet_sender, packet_receiver) = mpsc::channel();
-        let buffer_size = config.receive_buffer_size;
+        let buffer_size = config.receive_buffer_size();
         (
             Self {
                 socket,
