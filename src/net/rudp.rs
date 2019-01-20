@@ -117,13 +117,11 @@ impl RudpSocket {
         let serialized = connection.process_outgoing(packet)?;
         let mut bytes_written = 0;
 
-        for fragment in serialized.fragments(self.config.fragment_size() as usize) {
+        for fragment in serialized.fragments(self.config.fragment_size()) {
             bytes_written += self.socket.send_to(fragment, &serialized.address())?;
         }
 
         // TODO: Might need to do something with dropped packets here?
-
-        dbg!(bytes_written);
 
         Ok(bytes_written)
     }
