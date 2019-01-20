@@ -1,7 +1,6 @@
-use crate::Packet;
+use crate::{packet::SerializedPacket, Packet};
 use std::{
-    fmt,
-    io,
+    fmt, io,
     net::SocketAddr,
     time::{Duration, Instant},
 };
@@ -22,15 +21,23 @@ impl VirtualConnection {
         }
     }
 
-    /// This process the incoming data and returns an packet if the data is complete.
+    /// This processes incoming payload data and returns a packet if the data is complete.
     ///
     /// Returns `Ok(None)`:
     /// 1. In the case of fragmentation and not all fragments are received
-    /// 2. In the case of the packet being queued for ordering and we are waiting on older packets first.
+    /// 2. In the case of the packet being queued for ordering and we are waiting on older packets
+    ///    first.
     pub fn process_incoming(&mut self, payload: &[u8]) -> io::Result<Option<Packet>> {
         self.last_packet_time = Instant::now();
-//        Ok(None)
-        Ok(Some(Packet::reliable_unordered(self.remote_address, payload.to_owned())))
+        //        Ok(None)
+        Ok(Some(Packet::reliable_unordered(
+            self.remote_address,
+            payload.to_owned(),
+        )))
+    }
+
+    pub fn process_outgoing(&mut self, packet: Packet) -> io::Result<SerializedPacket> {
+        Ok(SerializedPacket::new(packet.address()))
     }
 
     /// Represents the duration since we last received a packet from this client

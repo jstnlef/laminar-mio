@@ -4,17 +4,18 @@
 use std::io::stdin;
 
 use laminar::{
-    Packet,
     config::SocketConfig,
     error::NetworkError,
-    net::{RudpSocket, SocketEvent}
+    net::{RudpSocket, SocketEvent},
+    Packet,
 };
 use std::thread;
 
 const SERVER: &str = "127.0.0.1:12351";
 
 fn server() -> Result<(), NetworkError> {
-    let (mut socket, packet_sender, event_receiver) = RudpSocket::bind(SERVER, SocketConfig::default())?;
+    let (mut socket, packet_sender, event_receiver) =
+        RudpSocket::bind(SERVER, SocketConfig::default())?;
     let _thread = thread::spawn(move || socket.start_polling());
 
     println!("Listening for connections to {}", SERVER);
@@ -33,10 +34,12 @@ fn server() -> Result<(), NetworkError> {
 
                 println!("Received {:?} from {:?}", msg, ip);
 
-                packet_sender.send(Packet::reliable_unordered(
-                    packet.address(),
-                    "Copy that!".as_bytes().to_vec(),
-                )).unwrap();
+                packet_sender
+                    .send(Packet::reliable_unordered(
+                        packet.address(),
+                        "Copy that!".as_bytes().to_vec(),
+                    ))
+                    .unwrap();
             }
             SocketEvent::TimeOut(address) => {
                 println!("Client timed out: {}", address);
@@ -49,7 +52,8 @@ fn server() -> Result<(), NetworkError> {
 }
 
 fn client() -> Result<(), NetworkError> {
-    let (mut socket, packet_sender, event_receiver) = RudpSocket::bind("127.0.0.1:12352", SocketConfig::default())?;
+    let (mut socket, packet_sender, event_receiver) =
+        RudpSocket::bind("127.0.0.1:12352", SocketConfig::default())?;
     println!("Connected on {}", socket.local_addr().unwrap());
     let _thread = thread::spawn(move || socket.start_polling());
 
@@ -65,10 +69,12 @@ fn client() -> Result<(), NetworkError> {
         stdin.read_line(&mut s_buffer)?;
         let line = s_buffer.replace(|x| x == '\n' || x == '\r', "");
 
-        packet_sender.send(Packet::reliable_unordered(
-            server,
-            line.clone().into_bytes(),
-        )).unwrap();
+        packet_sender
+            .send(Packet::reliable_unordered(
+                server,
+                line.clone().into_bytes(),
+            ))
+            .unwrap();
 
         if line == "Bye!" {
             break;
@@ -83,7 +89,7 @@ fn client() -> Result<(), NetworkError> {
                 }
             }
             SocketEvent::TimeOut(_) => {}
-            _ => println!("Silence..")
+            _ => println!("Silence.."),
         }
     }
 

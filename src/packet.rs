@@ -1,8 +1,10 @@
 /// Contains code dealing with Packet headers
 mod headers;
 mod packet_type;
+mod serialized;
 
 pub use self::packet_type::{PacketType, PacketTypeId};
+pub use self::serialized::SerializedPacket;
 
 use crate::net::DeliveryMethod;
 use std::net::SocketAddr;

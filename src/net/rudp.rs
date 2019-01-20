@@ -6,7 +6,9 @@ use crate::{
 };
 use mio::{Evented, Events, Poll, PollOpt, Ready, Token};
 use std::{
-    self, io,
+    self,
+    io,
+    mem,
     net::{SocketAddr, ToSocketAddrs},
     sync::mpsc,
 };
@@ -20,7 +22,7 @@ pub struct RudpSocket {
     connections: ActiveConnections,
     receive_buffer: Vec<u8>,
     event_sender: mpsc::Sender<SocketEvent>,
-    packet_receiver: mpsc::Receiver<Packet>
+    packet_receiver: mpsc::Receiver<Packet>,
 }
 
 impl RudpSocket {
@@ -45,17 +47,22 @@ impl RudpSocket {
 
         let mut events = Events::with_capacity(self.config.socket_event_buffer_size);
         let events_ref = &mut events;
+        let packet_receiver = &mut mpsc::channel().1;
         loop {
             self.handle_idle_clients();
             poll.poll(events_ref, self.config.socket_polling_timeout)?;
             self.process_events(events_ref)?;
+
+            mem::swap(&mut self.packet_receiver, packet_receiver);
             // XXX: I'm fairly certain this isn't exactly safe. I'll likely need to add some
             // handling for when the socket is blocked on send. Worth some more research.
             // Alternatively, I'm sure the Tokio single threaded runtime does handle this for us
             // so maybe it's work switching to that while providing the same interface?
-            for packet in self.packet_receiver.try_iter() {
+            for packet in packet_receiver.try_iter() {
                 self.send_to_socket(packet)?;
             }
+
+            mem::swap(&mut self.packet_receiver, packet_receiver);
         }
     }
 
@@ -80,12 +87,15 @@ impl RudpSocket {
                 SOCKET => {
                     if event.readiness().is_readable() {
                         loop {
-                            match self.recv_from_socket() {
-                                Ok(Some(packet)) => self.event_sender.send(SocketEvent::Packet(packet)),
+                            match self.receive_from_socket() {
+                                Ok(Some(packet)) => {
+                                    self.event_sender.send(SocketEvent::Packet(packet))
+                                }
+                                Ok(None) => continue,
                                 Err(ref err) if err.kind() == io::ErrorKind::WouldBlock => break,
-                                // This covers the Ok(None) case which means we should keep looking
-                                // to receive data from the socket.
-                                _ => continue
+                                // TODO: Figure out what to do when we can a legitimate error
+                                // when receiving data from the socket.
+                                _ => continue,
                             };
                         }
                     }
@@ -102,12 +112,22 @@ impl RudpSocket {
     }
 
     /// Serializes and sends a `Packet` on the socket. On success, returns the number of bytes written.
-    fn send_to_socket(&self, packet: Packet) -> io::Result<usize> {
-        self.socket.send_to(packet.payload(), &packet.address())
+    fn send_to_socket(&mut self, packet: Packet) -> io::Result<usize> {
+        let connection = self.connections.get_or_insert_connection(&packet.address());
+        let serialized = connection.process_outgoing(packet)?;
+        let mut bytes_written = 0;
+
+        for fragment in serialized.fragments() {
+            bytes_written += self.socket.send_to(fragment, &serialized.address())?;
+        }
+
+        // TODO: Might need to do something with dropped packets here?
+
+        Ok(bytes_written)
     }
 
     /// Receives a single message from the socket. On success, returns the packet containing origin and data.
-    fn recv_from_socket(&mut self) -> io::Result<Option<Packet>> {
+    fn receive_from_socket(&mut self) -> io::Result<Option<Packet>> {
         let (recv_len, address) = self.socket.recv_from(&mut self.receive_buffer)?;
         let payload = &self.receive_buffer[..recv_len];
         let connection = self.connections.get_or_insert_connection(&address);
@@ -128,10 +148,10 @@ impl RudpSocket {
                 connections: ActiveConnections::new(),
                 receive_buffer: vec![0; buffer_size],
                 event_sender,
-                packet_receiver
+                packet_receiver,
             },
             packet_sender,
-            event_receiver
+            event_receiver,
         )
     }
 }

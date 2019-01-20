@@ -1,7 +1,7 @@
 use std::{
     fmt::{self, Display, Formatter},
     io,
-    sync::mpsc
+    sync::mpsc,
 };
 
 #[derive(Debug)]
@@ -14,7 +14,7 @@ pub enum NetworkErrorKind {
     /// been started
     PollingNotStarted,
     /// Did not receive enough data
-    ReceivedDataToShort
+    ReceivedDataToShort,
 }
 
 impl Display for NetworkErrorKind {
@@ -26,9 +26,10 @@ impl Display for NetworkErrorKind {
                 kind
             ),
             NetworkErrorKind::IOError(e) => write!(f, "An IO Error occurred. Reason: {:?}.", e),
-            NetworkErrorKind::PollingNotStarted => {
-                write!(f, "Trying to send a packet without first starting the event loop")
-            }
+            NetworkErrorKind::PollingNotStarted => write!(
+                f,
+                "Trying to send a packet without first starting the event loop"
+            ),
             NetworkErrorKind::ReceivedDataToShort => {
                 write!(f, "The received data did not have any length.")
             }

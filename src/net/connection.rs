@@ -2,7 +2,11 @@ mod virtual_connection;
 
 use self::virtual_connection::VirtualConnection;
 
-use std::{collections::HashMap, net::SocketAddr, time::Duration};
+use std::{
+    collections::HashMap,
+    net::SocketAddr,
+    time::Duration
+};
 
 ///
 ///
@@ -26,7 +30,7 @@ impl ActiveConnections {
         }
         self.connections
             .get_mut(address)
-            .expect("We just added this key")
+            .expect("We just added this key. It should definitely exist.")
     }
 
     /// Removes the connection from ActiveConnections by socket address.
