@@ -1,5 +1,5 @@
 use super::{calc_header_size, HeaderReader, HeaderWriter};
-use crate::{packet::PacketTypeId, protocol_version::ProtocolVersion};
+use crate::{packet::PacketTypeId, protocol_version};
 use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
 use lazy_static::lazy_static;
 use std::io;
@@ -32,7 +32,7 @@ impl Default for HeartBeatHeader {
 
 impl HeaderWriter for HeartBeatHeader {
     fn write(&self, buffer: &mut Vec<u8>) -> io::Result<()> {
-        buffer.write_u32::<BigEndian>(ProtocolVersion::get_crc32())?;
+        buffer.write_u32::<BigEndian>(protocol_version::get_crc32())?;
         buffer.write_u8(PacketTypeId::get_id(self.packet_type_id))?;
 
         Ok(())

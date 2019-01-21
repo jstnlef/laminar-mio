@@ -1,5 +1,5 @@
 use super::{calc_header_size, HeaderReader, HeaderWriter};
-use crate::{net::DeliveryMethod, packet::PacketTypeId, protocol_version::ProtocolVersion};
+use crate::{net::DeliveryMethod, packet::PacketTypeId, protocol_version};
 use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
 use lazy_static::lazy_static;
 use std::io;
@@ -23,7 +23,7 @@ impl StandardHeader {
     /// Create new standard header.
     pub fn new(delivery_method: DeliveryMethod, packet_type: PacketTypeId) -> Self {
         StandardHeader {
-            protocol_version: ProtocolVersion::get_crc32(),
+            protocol_version: protocol_version::get_crc32(),
             packet_type,
             delivery_method,
         }
@@ -82,7 +82,7 @@ mod tests {
     use super::{HeaderReader, HeaderWriter, StandardHeader};
     use crate::net::DeliveryMethod;
     use crate::packet::PacketTypeId;
-    use crate::protocol_version::ProtocolVersion;
+    use crate::protocol_version;
     use std::io::Cursor;
 
     #[test]
@@ -94,7 +94,7 @@ mod tests {
 
         let mut cursor = Cursor::new(buffer.as_slice());
         let packet_header = StandardHeader::read(&mut cursor).unwrap();
-        assert!(ProtocolVersion::valid_version(
+        assert!(protocol_version::valid_version(
             packet_header.protocol_version
         ));
         assert_eq!(packet_header.packet_type, PacketTypeId::Packet);

@@ -4,7 +4,7 @@ use crate::{
         headers::{HeaderReader, HeaderWriter, StandardHeader},
         PacketTypeId, ProcessedPacket,
     },
-    Packet, ProtocolVersion,
+    Packet, protocol_version,
 };
 use std::{
     fmt, io,
@@ -40,7 +40,7 @@ impl VirtualConnection {
         let mut cursor = io::Cursor::new(payload);
         let header = StandardHeader::read(&mut cursor)?;
 
-        if !ProtocolVersion::valid_version(header.protocol_version()) {
+        if !protocol_version::valid_version(header.protocol_version()) {
             return Err(LaminarError::ProtocolVersionMismatch.into());
         }
 

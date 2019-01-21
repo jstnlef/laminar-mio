@@ -8,27 +8,22 @@ lazy_static! {
     static ref VERSION_CRC32: u32 = crc32::checksum_ieee(PROTOCOL_VERSION.as_bytes());
 }
 
-/// Wrapper to provide some functions to perform with the current protocol version.
-pub struct ProtocolVersion;
+/// Get the current protocol version.
+#[inline]
+pub fn get_version() -> &'static str {
+    &PROTOCOL_VERSION
+}
 
-impl ProtocolVersion {
-    /// Get the current protocol version.
-    #[inline]
-    pub fn get_version() -> &'static str {
-        &PROTOCOL_VERSION
-    }
+/// This will return the crc32 from the current protocol version.
+#[inline]
+pub fn get_crc32() -> u32 {
+    *VERSION_CRC32
+}
 
-    /// This will return the crc32 from the current protocol version.
-    #[inline]
-    pub fn get_crc32() -> u32 {
-        *VERSION_CRC32
-    }
-
-    /// Validate a crc32 with the current protocol version and return the results.
-    #[inline]
-    pub fn valid_version(protocol_version_crc32: u32) -> bool {
-        protocol_version_crc32 == ProtocolVersion::get_crc32()
-    }
+/// Validate a crc32 with the current protocol version and return the results.
+#[inline]
+pub fn valid_version(protocol_version_crc32: u32) -> bool {
+    protocol_version_crc32 == get_crc32()
 }
 
 #[cfg(test)]
@@ -36,24 +31,24 @@ mod test {
     use super::*;
 
     #[test]
-    fn valid_version() {
+    fn test_valid_version() {
         let protocol_id = crc32::checksum_ieee(&PROTOCOL_VERSION.as_bytes());
-        assert!(ProtocolVersion::valid_version(protocol_id));
+        assert!(valid_version(protocol_id));
     }
 
     #[test]
-    fn not_valid_version() {
+    fn test_not_valid_version() {
         let protocol_id = crc32::checksum_ieee("not-laminar".as_bytes());
-        assert!(!ProtocolVersion::valid_version(protocol_id));
+        assert!(!valid_version(protocol_id));
     }
 
     #[test]
-    fn get_crc32() {
-        assert_eq!(ProtocolVersion::get_crc32(), *VERSION_CRC32);
+    fn test_get_crc32() {
+        assert_eq!(get_crc32(), *VERSION_CRC32);
     }
 
     #[test]
-    fn get_version() {
-        assert_eq!(ProtocolVersion::get_version(), *PROTOCOL_VERSION);
+    fn test_get_version() {
+        assert_eq!(get_version(), *PROTOCOL_VERSION);
     }
 }

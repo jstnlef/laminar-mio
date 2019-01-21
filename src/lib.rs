@@ -1,4 +1,5 @@
-mod protocol_version;
+/// Contains information about the laminar protocol version
+pub mod protocol_version;
 
 /// Contains networking related configuration
 pub mod config;
@@ -11,4 +12,3 @@ pub mod net;
 
 mod packet;
 pub use self::packet::Packet;
-pub use self::protocol_version::ProtocolVersion;
