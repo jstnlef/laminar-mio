@@ -25,12 +25,12 @@ pub trait HeaderReader {
     fn read(rdr: &mut io::Cursor<&[u8]>) -> Self::Header;
 
     /// This will get the size of the header.
-    fn size(&self) -> u8;
+    fn size(&self) -> usize;
 }
 
 /// Small helper method to statically calculate the written size of a header struct
-fn calc_header_size<T: Default + HeaderWriter>() -> u8 {
+fn calc_header_size<T: Default + HeaderWriter>() -> usize {
     let mut buffer: Vec<u8> = Vec::new();
     let _ = T::default().write(&mut buffer);
-    buffer.len() as u8
+    buffer.len()
 }

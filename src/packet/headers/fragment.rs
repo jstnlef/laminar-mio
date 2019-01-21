@@ -5,7 +5,7 @@ use lazy_static::lazy_static;
 use std::io;
 
 lazy_static! {
-    static ref HEADER_SIZE: u8 = calc_header_size::<FragmentHeader>();
+    static ref HEADER_SIZE: usize = calc_header_size::<FragmentHeader>();
 }
 
 /// This header represents a fragmented packet header.
@@ -117,7 +117,7 @@ impl HeaderReader for FragmentHeader {
     }
 
     /// Get the size of this header.
-    fn size(&self) -> u8 {
+    fn size(&self) -> usize {
         if self.id == 0 {
             match self.packet_header {
                 Some(header) => header.size() + *HEADER_SIZE,
@@ -148,7 +148,7 @@ mod tests {
 
         // create fragment header with the default header and acked header.
         let fragment = FragmentHeader::new(standard_header.clone(), 0, 1, packet_header.clone());
-        let mut fragment_buffer = Vec::with_capacity((fragment.size() + 1) as usize);
+        let mut fragment_buffer = Vec::with_capacity(fragment.size() + 1);
         fragment.write(&mut fragment_buffer).unwrap();
 
         let mut cursor: Cursor<&[u8]> = Cursor::new(fragment_buffer.as_slice());

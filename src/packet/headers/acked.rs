@@ -4,7 +4,7 @@ use lazy_static::lazy_static;
 use std::io;
 
 lazy_static! {
-    static ref HEADER_SIZE: u8 = calc_header_size::<AckedPacketHeader>();
+    static ref HEADER_SIZE: usize = calc_header_size::<AckedPacketHeader>();
 }
 
 /// This header providing reliability information.
@@ -87,7 +87,7 @@ impl HeaderReader for AckedPacketHeader {
         })
     }
 
-    fn size(&self) -> u8 {
+    fn size(&self) -> usize {
         *HEADER_SIZE
     }
 }
@@ -100,7 +100,7 @@ mod tests {
     #[test]
     pub fn serializes_deserialize_acked_header_test() {
         let packet_header = AckedPacketHeader::new(StandardHeader::default(), 1, 1, 5421);
-        let mut buffer = Vec::with_capacity((packet_header.size() + 1) as usize);
+        let mut buffer = Vec::with_capacity(packet_header.size() + 1);
 
         let _ = packet_header.write(&mut buffer);
 

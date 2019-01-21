@@ -5,7 +5,7 @@ use lazy_static::lazy_static;
 use std::io;
 
 lazy_static! {
-    static ref HEADER_SIZE: u8 = calc_header_size::<HeartBeatHeader>();
+    static ref HEADER_SIZE: usize = calc_header_size::<HeartBeatHeader>();
 }
 
 /// This header represents an heartbeat packet header.
@@ -53,7 +53,7 @@ impl HeaderReader for HeartBeatHeader {
     }
 
     /// Get the size of this header.
-    fn size(&self) -> u8 {
+    fn size(&self) -> usize {
         *HEADER_SIZE
     }
 }

@@ -5,7 +5,7 @@ use lazy_static::lazy_static;
 use std::io;
 
 lazy_static! {
-    pub static ref HEADER_SIZE: u8 = calc_header_size::<StandardHeader>();
+    pub static ref HEADER_SIZE: usize = calc_header_size::<StandardHeader>();
 }
 
 /// This header will be included in each packet, and contains some basic information.
@@ -72,7 +72,7 @@ impl HeaderReader for StandardHeader {
     }
 
     /// Get the size of this header.
-    fn size(&self) -> u8 {
+    fn size(&self) -> usize {
         *HEADER_SIZE
     }
 }
@@ -88,7 +88,7 @@ mod tests {
     #[test]
     pub fn serializes_deserialize_packet_header_test() {
         let packet_header = StandardHeader::default();
-        let mut buffer = Vec::with_capacity((packet_header.size() + 1) as usize);
+        let mut buffer = Vec::with_capacity(packet_header.size() + 1);
 
         let _ = packet_header.write(&mut buffer);
 
