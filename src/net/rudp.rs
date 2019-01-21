@@ -44,7 +44,7 @@ impl RudpSocket {
 
         let mut events = Events::with_capacity(self.config.socket_event_buffer_size());
         let events_ref = &mut events;
-        // Packet receiver must only be used in this method.
+        // Packet receiver MUST only be used in this method.
         let packet_receiver = mem::replace(&mut self.packet_receiver, mpsc::channel().1);
         loop {
             self.handle_idle_clients();

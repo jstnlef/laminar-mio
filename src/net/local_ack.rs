@@ -42,7 +42,7 @@ impl LocalAckRecord {
                 if field_acked {
                     acked_packets.push(*key);
                 }
-            } else if diff < 32768 {
+            } else if diff < 32000 {
                 dropped_packets.push(*key);
             }
         }

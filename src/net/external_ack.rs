@@ -25,7 +25,7 @@ impl ExternalAcks {
         }
 
         // TODO: Reevaluate this logic. Something doesn't seem right...
-        if pos_diff < 32768 {
+        if pos_diff < 32000 {
             if pos_diff <= 32 {
                 self.ack_field = ((self.ack_field << 1) | 1) << (pos_diff - 1);
             } else {
