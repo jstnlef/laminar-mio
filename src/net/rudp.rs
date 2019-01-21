@@ -112,7 +112,7 @@ impl RudpSocket {
         let processed = connection.process_outgoing(packet)?;
         let mut bytes_written = 0;
 
-        for fragment in processed.fragments(self.config.fragment_size()) {
+        for fragment in processed.fragments(self.config.fragment_size_bytes()) {
             bytes_written += self.socket.send_to(fragment, &processed.address())?;
         }
 
@@ -135,7 +135,7 @@ impl RudpSocket {
     ) -> (Self, mpsc::Sender<Packet>, mpsc::Receiver<SocketEvent>) {
         let (event_sender, event_receiver) = mpsc::channel();
         let (packet_sender, packet_receiver) = mpsc::channel();
-        let buffer_size = config.receive_buffer_size();
+        let buffer_size = config.receive_buffer_size_bytes();
         (
             Self {
                 socket,
