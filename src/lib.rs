@@ -4,7 +4,7 @@ mod protocol_version;
 pub mod config;
 
 /// Error definitions
-pub mod error;
+pub mod errors;
 
 /// Networking modules
 pub mod net;

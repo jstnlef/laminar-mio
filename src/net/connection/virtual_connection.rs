@@ -1,8 +1,8 @@
 use crate::{
-    error::LaminarError,
+    errors::LaminarError,
     packet::{
-        headers::{HeaderReader, StandardHeader},
-        PacketTypeId, SerializedPacket,
+        headers::{HeaderReader, HeaderWriter, StandardHeader},
+        PacketTypeId, ProcessedPacket,
     },
     Packet, ProtocolVersion,
 };
@@ -44,17 +44,22 @@ impl VirtualConnection {
             return Err(LaminarError::ProtocolVersionMismatch.into());
         }
 
-        if header.packet_type() == PacketTypeId::Fragment {}
-
-        //        Ok(None)
         Ok(Some(Packet::reliable_unordered(
             self.remote_address,
             payload.to_owned(),
         )))
     }
 
-    pub fn process_outgoing(&mut self, packet: Packet) -> io::Result<SerializedPacket> {
-        Ok(SerializedPacket::new(packet.address()))
+    /// This pre-process the given buffer to be send over the network.
+    /// 1. It will append the right header.
+    /// 2. It will perform some actions related to how the packet should be delivered.
+    pub fn process_outgoing(&mut self, packet: Packet) -> io::Result<ProcessedPacket> {
+        let header = StandardHeader::new(packet.delivery_method(), PacketTypeId::Packet);
+        let mut buffer = Vec::with_capacity((header.size() as usize) + packet.payload().len());
+        header.write(&mut buffer)?;
+        buffer.extend(packet.payload());
+
+        Ok(ProcessedPacket::new(packet.address(), buffer))
     }
 
     /// Represents the duration since we last received a packet from this client

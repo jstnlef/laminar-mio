@@ -58,8 +58,6 @@ impl RudpSocket {
                 self.send_to_socket(packet)?;
             }
         }
-        mem::replace(&mut self.packet_receiver, packet_receiver);
-        Ok(())
     }
 
     /// Iterate through all of the idle connections based on `idle_connection_timeout` config and
@@ -111,11 +109,11 @@ impl RudpSocket {
     /// Serializes and sends a `Packet` on the socket. On success, returns the number of bytes written.
     fn send_to_socket(&mut self, packet: Packet) -> io::Result<usize> {
         let connection = self.connections.get_or_insert_connection(&packet.address());
-        let serialized = connection.process_outgoing(packet)?;
+        let processed = connection.process_outgoing(packet)?;
         let mut bytes_written = 0;
 
-        for fragment in serialized.fragments(self.config.fragment_size()) {
-            bytes_written += self.socket.send_to(fragment, &serialized.address())?;
+        for fragment in processed.fragments(self.config.fragment_size()) {
+            bytes_written += self.socket.send_to(fragment, &processed.address())?;
         }
 
         // TODO: Might need to do something with dropped packets here?
@@ -126,9 +124,9 @@ impl RudpSocket {
     /// Receives a single message from the socket. On success, returns the packet containing origin and data.
     fn receive_from_socket(&mut self) -> io::Result<Option<Packet>> {
         let (recv_len, address) = self.socket.recv_from(&mut self.receive_buffer)?;
-        let payload = &self.receive_buffer[..recv_len];
+        let received_payload = &self.receive_buffer[..recv_len];
         let connection = self.connections.get_or_insert_connection(&address);
-        connection.process_incoming(payload)
+        connection.process_incoming(received_payload)
     }
 
     fn new(

@@ -4,7 +4,7 @@ mod packet_type;
 mod serialized;
 
 pub use self::packet_type::{PacketType, PacketTypeId};
-pub use self::serialized::SerializedPacket;
+pub use self::serialized::ProcessedPacket;
 
 use crate::net::DeliveryMethod;
 use std::net::SocketAddr;
@@ -31,9 +31,9 @@ impl Packet {
     /// |       Yes       |        Yes         |      No          |      No              |       No        |
     ///
     /// Basically just bare UDP, free to be dropped, used for very unnecessary data, great for 'general' position updates.
-    pub fn unreliable(addr: SocketAddr, payload: Vec<u8>) -> Packet {
+    pub fn unreliable(address: SocketAddr, payload: Vec<u8>) -> Packet {
         Packet::new(
-            addr,
+            address,
             payload.into_boxed_slice(),
             DeliveryMethod::UnreliableUnordered,
         )
@@ -49,9 +49,9 @@ impl Packet {
     ///
     /// Basically this is almost TCP like without ordering of packets.
     /// Receive every packet and immediately give to application, order does not matter.
-    pub fn reliable_unordered(addr: SocketAddr, payload: Vec<u8>) -> Packet {
+    pub fn reliable_unordered(address: SocketAddr, payload: Vec<u8>) -> Packet {
         Packet::new(
-            addr,
+            address,
             payload.into_boxed_slice(),
             DeliveryMethod::ReliableUnordered,
         )

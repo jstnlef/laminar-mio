@@ -1,17 +1,15 @@
+use crate::packet::headers::HeaderWriter;
 use std::net::SocketAddr;
 
 /// Wrapper struct to hold the fully serialized packet (includes header data)
-pub struct SerializedPacket {
+pub struct ProcessedPacket {
     address: SocketAddr,
     payload: Vec<u8>,
 }
 
-impl SerializedPacket {
-    pub fn new(address: SocketAddr) -> Self {
-        Self {
-            address,
-            payload: vec![65, 66, 67],
-        }
+impl ProcessedPacket {
+    pub fn new(address: SocketAddr, payload: Vec<u8>) -> Self {
+        Self { address, payload }
     }
 
     /// Get the endpoint from this packet.

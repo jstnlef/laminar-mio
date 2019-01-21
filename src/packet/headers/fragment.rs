@@ -1,5 +1,5 @@
 use super::{calc_header_size, AckedPacketHeader, HeaderReader, HeaderWriter, StandardHeader};
-use crate::error::FragmentError;
+use crate::errors::FragmentError;
 use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
 use lazy_static::lazy_static;
 use std::io;
