@@ -10,6 +10,7 @@ use crate::{
 };
 use std::{
     fmt, io,
+    io::Read,
     net::SocketAddr,
     time::{Duration, Instant},
 };
@@ -66,9 +67,9 @@ impl VirtualConnection {
                 let reliable_header = ReliableHeader::read(&mut cursor)?;
                 self.external_acks.ack(reliable_header.sequence_num());
 
-//                // Update congestion information.
-//                let congestion_data = self.congestion_data.get_mut(acked_header.ack_seq());
-//                self.rtt = self.rtt_measurer.get_rtt(congestion_data);
+                //                // Update congestion information.
+                //                let congestion_data = self.congestion_data.get_mut(acked_header.ack_seq());
+                //                self.rtt = self.rtt_measurer.get_rtt(congestion_data);
 
                 // Update dropped packets if there are any.
                 let dropped_packets = self
@@ -80,11 +81,12 @@ impl VirtualConnection {
             _ => {}
         }
 
-        let payload = cursor.into_inner().to_owned().into_boxed_slice();
+        let mut payload = Vec::with_capacity(payload.len());
+        cursor.read_to_end(&mut payload);
 
         Ok(Some(Packet::new(
             self.remote_address,
-            payload,
+            payload.into_boxed_slice(),
             standard_header.delivery_method(),
         )))
     }
@@ -97,11 +99,11 @@ impl VirtualConnection {
             return Err(PacketError::ExceededMaxPacketSize.into());
         }
 
-//        // Queue congestion data.
-//        self.congestion_data.insert(
-//            CongestionData::new(self.seq_num, Instant::now()),
-//            self.seq_num,
-//        );
+        //        // Queue congestion data.
+        //        self.congestion_data.insert(
+        //            CongestionData::new(self.seq_num, Instant::now()),
+        //            self.seq_num,
+        //        );
 
         let reliability_header = match packet.delivery_method() {
             // TODO: Only implementing the reliable packets currently
