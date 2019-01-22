@@ -6,9 +6,6 @@ mod local_ack;
 mod rudp;
 
 pub use self::{
-    delivery_method::DeliveryMethod,
-    events::SocketEvent,
-    rudp::RudpSocket,
-    external_ack::ExternalAcks,
-    local_ack::LocalAckRecord
+    delivery_method::DeliveryMethod, events::SocketEvent, external_ack::ExternalAcks,
+    local_ack::LocalAckRecord, rudp::RudpSocket,
 };

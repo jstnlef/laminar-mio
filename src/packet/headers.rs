@@ -36,29 +36,3 @@ fn calc_header_size<T: Default + HeaderWriter>() -> usize {
     let _ = T::default().write(&mut buffer);
     buffer.len()
 }
-
-pub struct EmptyHeader;
-
-impl EmptyHeader {
-    pub fn new() -> Self {
-        Self{}
-    }
-}
-
-impl HeaderWriter for EmptyHeader {
-    fn write(&self, buffer: &mut Vec<u8>) -> io::Result<()> {
-        Ok(())
-    }
-}
-
-impl HeaderReader for EmptyHeader {
-    type Header = io::Result<Self>;
-
-    fn read(rdr: &mut io::Cursor<&[u8]>) -> Self::Header {
-        Ok(Self::new())
-    }
-
-    fn size(&self) -> usize {
-        0
-    }
-}

@@ -58,7 +58,11 @@ impl Packet {
     }
 
     /// Create an new packet by passing the receiver, data and how this packet should be delivered.
-    fn new(address: SocketAddr, payload: Box<[u8]>, delivery_method: DeliveryMethod) -> Self {
+    pub(crate) fn new(
+        address: SocketAddr,
+        payload: Box<[u8]>,
+        delivery_method: DeliveryMethod,
+    ) -> Self {
         Packet {
             address,
             payload,

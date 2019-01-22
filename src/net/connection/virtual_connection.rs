@@ -1,12 +1,10 @@
 use crate::{
     config::SocketConfig,
     errors::{LaminarError, PacketError},
+    net::{DeliveryMethod, ExternalAcks, LocalAckRecord},
     packet::{
-        headers::{HeaderReader, HeaderWriter, EmptyHeader, StandardHeader, ReliableHeader},
-        PacketTypeId, ProcessedPacket
-    },
-    net::{
-        DeliveryMethod, LocalAckRecord, ExternalAcks
+        headers::{HeaderReader, HeaderWriter, ReliableHeader, StandardHeader},
+        PacketTypeId, ProcessedPacket,
     },
     protocol_version, Packet,
 };
@@ -30,6 +28,7 @@ pub struct VirtualConnection {
     sequence_num: u16,
     local_acks: LocalAckRecord,
     external_acks: ExternalAcks,
+    dropped_packets: Vec<Box<[u8]>>,
 }
 
 impl VirtualConnection {
@@ -40,7 +39,8 @@ impl VirtualConnection {
             max_packet_size_bytes: config.max_packet_size_bytes(),
             sequence_num: 0,
             local_acks: LocalAckRecord::default(),
-            external_acks: ExternalAcks::default()
+            external_acks: ExternalAcks::default(),
+            dropped_packets: Vec::new(),
         }
     }
 
@@ -55,27 +55,55 @@ impl VirtualConnection {
         self.last_packet_time = Instant::now();
 
         let mut cursor = io::Cursor::new(payload);
-        let header = StandardHeader::read(&mut cursor)?;
+        let standard_header = StandardHeader::read(&mut cursor)?;
 
-        if !protocol_version::valid_version(header.protocol_version()) {
+        if !protocol_version::valid_version(standard_header.protocol_version()) {
             return Err(LaminarError::ProtocolVersionMismatch.into());
         }
 
-        Ok(Some(Packet::reliable_unordered(
+        match standard_header.delivery_method() {
+            DeliveryMethod::ReliableUnordered => {
+                let reliable_header = ReliableHeader::read(&mut cursor)?;
+                self.external_acks.ack(reliable_header.sequence_num());
+
+//                // Update congestion information.
+//                let congestion_data = self.congestion_data.get_mut(acked_header.ack_seq());
+//                self.rtt = self.rtt_measurer.get_rtt(congestion_data);
+
+                // Update dropped packets if there are any.
+                let dropped_packets = self
+                    .local_acks
+                    .ack(reliable_header.last_acked(), reliable_header.ack_field());
+
+                self.dropped_packets = dropped_packets.into_iter().map(|(_, p)| p).collect();
+            }
+            _ => {}
+        }
+
+        let payload = cursor.into_inner().to_owned().into_boxed_slice();
+
+        Ok(Some(Packet::new(
             self.remote_address,
-            payload[header.size()..].to_owned(),
+            payload,
+            standard_header.delivery_method(),
         )))
     }
 
-    /// This pre-process the given buffer to be send over the network.
-    /// 1. It will append the right header.
-    /// 2. It will perform some actions related to how the packet should be delivered.
+    /// This pre-process the given Packet to be send over the network.
+    /// It will perform some actions related to how the packet should be delivered and return
+    /// a ProcessedPacket
     pub fn process_outgoing(&mut self, packet: Packet) -> io::Result<ProcessedPacket> {
         if packet.payload().len() > self.max_packet_size_bytes {
             return Err(PacketError::ExceededMaxPacketSize.into());
         }
 
-        let typed_header = match packet.delivery_method() {
+//        // Queue congestion data.
+//        self.congestion_data.insert(
+//            CongestionData::new(self.seq_num, Instant::now()),
+//            self.seq_num,
+//        );
+
+        let reliability_header = match packet.delivery_method() {
             // TODO: Only implementing the reliable packets currently
             DeliveryMethod::ReliableUnordered => {
                 // Queue packet for awaiting acknowledgement.
@@ -84,21 +112,17 @@ impl VirtualConnection {
                 let header = ReliableHeader::new(
                     self.sequence_num,
                     self.external_acks.last_acked(),
-                    self.external_acks.ack_field()
+                    self.external_acks.ack_field(),
                 );
 
                 // Increase local sequence number.
                 self.sequence_num = self.sequence_num.wrapping_add(1);
-                header;
+                Some(header)
             }
-            _ => {}
+            _ => None,
         };
 
-        Ok(ProcessedPacket::new(
-            packet.address(),
-            packet.delivery_method(),
-            packet.payload(),
-        ))
+        Ok(ProcessedPacket::new(packet, reliability_header))
     }
 
     /// Represents the duration since we last received a packet from this client
@@ -110,6 +134,30 @@ impl VirtualConnection {
     /// The remote address of the client
     pub fn remote_address(&self) -> SocketAddr {
         self.remote_address
+    }
+
+    /// Check if this channel has dropped packets.
+    ///
+    /// You could directly call `ReliableChannel::drain_dropped_packets()` and if it returns an empty vector you know there are no packets.
+    /// But draining a vector will have its extra check logic even if it's empty.
+    /// So that's why this function exists just a little shortcut to check if there are dropped packets which will be faster at the end.
+    pub fn has_dropped_packets(&self) -> bool {
+        !self.dropped_packets.is_empty()
+    }
+
+    /// Creates a draining iterator that removes dropped packets and yield the ones that are removed.
+    ///
+    /// So why drain?
+    /// You have to think about the packet flow first.
+    /// 1. Once we send a packet we place it in a queue until acknowledged.
+    /// 2. If the packet doesn't get acknowledged in some time it will be dropped.
+    /// 3. When we notice the packet drop we directly want to resend the dropped packet.
+    /// 4. Once we notice that we start at '1' again.
+    ///
+    /// So keeping track of old dropped packets does not make sense, at least for now.
+    /// We except when dropped packets are retrieved they will be sent out so we don't need to keep track of them internally the caller of this function will have ownership over them after the call.
+    pub fn drain_dropped_packets(&mut self) -> Vec<Box<[u8]>> {
+        self.dropped_packets.drain(..).collect()
     }
 }
 

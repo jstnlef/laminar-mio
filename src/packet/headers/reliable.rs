@@ -23,21 +23,24 @@ impl ReliableHeader {
         Self {
             sequence_num,
             last_acked,
-            ack_field
+            ack_field,
         }
     }
 
     /// Get the sequence number from this packet.
+    #[inline]
     pub fn sequence_num(&self) -> u16 {
         self.sequence_num
     }
 
     /// Get last acknowledged sequence number.
+    #[inline]
     pub fn last_acked(&self) -> u16 {
         self.last_acked
     }
 
     /// Get bit field of all last 32 acknowledged packets
+    #[inline]
     pub fn ack_field(&self) -> u32 {
         self.ack_field
     }
@@ -76,7 +79,7 @@ impl HeaderReader for ReliableHeader {
 
 #[cfg(test)]
 mod tests {
-    use super::{ReliableHeader, HeaderReader, HeaderWriter};
+    use super::{HeaderReader, HeaderWriter, ReliableHeader};
     use std::io::Cursor;
 
     #[test]

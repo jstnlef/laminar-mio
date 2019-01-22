@@ -36,6 +36,10 @@ impl StandardHeader {
     pub fn packet_type(&self) -> PacketTypeId {
         self.packet_type
     }
+
+    pub fn delivery_method(&self) -> DeliveryMethod {
+        self.delivery_method
+    }
 }
 
 impl Default for StandardHeader {
