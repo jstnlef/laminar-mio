@@ -81,6 +81,7 @@ impl VirtualConnection {
             _ => {}
         }
 
+        // Read the rest of the bytes from the cursor to get the payload.
         let mut payload = Vec::with_capacity(payload.len());
         cursor.read_to_end(&mut payload);
 
