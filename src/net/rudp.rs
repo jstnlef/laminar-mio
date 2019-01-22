@@ -109,7 +109,9 @@ impl RudpSocket {
 
     /// Serializes and sends a `Packet` on the socket. On success, returns the number of bytes written.
     fn send_to_socket(&mut self, packet: Packet) -> io::Result<usize> {
-        let connection = self.connections.get_or_insert_connection(&packet.address(), &self.config);
+        let connection = self
+            .connections
+            .get_or_insert_connection(&packet.address(), &self.config);
         let processed = connection.process_outgoing(packet)?;
         let mut bytes_written = 0;
 
@@ -130,7 +132,9 @@ impl RudpSocket {
         }
 
         let received_payload = &self.receive_buffer[..recv_len];
-        let connection = self.connections.get_or_insert_connection(&address, &self.config);
+        let connection = self
+            .connections
+            .get_or_insert_connection(&address, &self.config);
         connection.process_incoming(received_payload)
     }
 

@@ -5,6 +5,10 @@ mod external_ack;
 mod local_ack;
 mod rudp;
 
-pub use crate::net::delivery_method::DeliveryMethod;
-pub use crate::net::events::SocketEvent;
-pub use crate::net::rudp::RudpSocket;
+pub use self::{
+    delivery_method::DeliveryMethod,
+    events::SocketEvent,
+    rudp::RudpSocket,
+    external_ack::ExternalAcks,
+    local_ack::LocalAckRecord
+};

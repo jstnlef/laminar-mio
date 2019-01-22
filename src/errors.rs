@@ -81,15 +81,15 @@ impl Into<io::Error> for FragmentError {
 #[derive(Debug)]
 pub enum PacketError {
     /// Max packet size was exceeded
-    ExceededMaxPacketSize
+    ExceededMaxPacketSize,
 }
 
 impl Display for PacketError {
     fn fmt(&self, f: &mut Formatter) -> fmt::Result {
         match self {
-            PacketError::ExceededMaxPacketSize => write!(
-                f, "The packet size was bigger than the max allowed size."
-            ),
+            PacketError::ExceededMaxPacketSize => {
+                write!(f, "The packet size was bigger than the max allowed size.")
+            }
         }
     }
 }

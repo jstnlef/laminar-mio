@@ -40,7 +40,7 @@ impl HeaderWriter for HeartBeatHeader {
 }
 
 impl HeaderReader for HeartBeatHeader {
-    type Header = io::Result<HeartBeatHeader>;
+    type Header = io::Result<Self>;
 
     fn read(rdr: &mut io::Cursor<&[u8]>) -> Self::Header {
         let _ = rdr.read_u32::<BigEndian>()?;

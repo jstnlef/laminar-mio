@@ -71,7 +71,7 @@ impl HeaderWriter for AckedPacketHeader {
 }
 
 impl HeaderReader for AckedPacketHeader {
-    type Header = io::Result<AckedPacketHeader>;
+    type Header = io::Result<Self>;
 
     fn read(rdr: &mut io::Cursor<&[u8]>) -> Self::Header {
         let standard_header = StandardHeader::read(rdr)?;

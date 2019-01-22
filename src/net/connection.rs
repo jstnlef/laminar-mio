@@ -20,7 +20,11 @@ impl ActiveConnections {
 
     /// Try to get a VirtualConnection by address. If the connection does not exist, it will be
     /// inserted and returned.
-    pub fn get_or_insert_connection(&mut self, address: &SocketAddr, config: &SocketConfig) -> &mut VirtualConnection {
+    pub fn get_or_insert_connection(
+        &mut self,
+        address: &SocketAddr,
+        config: &SocketConfig,
+    ) -> &mut VirtualConnection {
         if !self.connections.contains_key(address) {
             self.connections
                 .insert(*address, VirtualConnection::new(*address, config));
@@ -67,7 +71,10 @@ mod tests {
 
         // add 10 clients
         for i in 0..10 {
-            connections.get_or_insert_connection(&(format!("127.0.0.1:123{}", i).parse().unwrap()), &config);
+            connections.get_or_insert_connection(
+                &(format!("127.0.0.1:123{}", i).parse().unwrap()),
+                &config,
+            );
         }
 
         assert_eq!(connections.count(), 10);

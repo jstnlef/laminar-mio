@@ -2,8 +2,11 @@ use crate::{
     config::SocketConfig,
     errors::{LaminarError, PacketError},
     packet::{
-        headers::{HeaderReader, HeaderWriter, StandardHeader},
-        PacketTypeId, ProcessedPacket,
+        headers::{HeaderReader, HeaderWriter, EmptyHeader, StandardHeader, ReliableHeader},
+        PacketTypeId, ProcessedPacket
+    },
+    net::{
+        DeliveryMethod, LocalAckRecord, ExternalAcks
     },
     protocol_version, Packet,
 };
@@ -21,6 +24,12 @@ pub struct VirtualConnection {
     remote_address: SocketAddr,
     /// Maximum size a packet can be.
     max_packet_size_bytes: usize,
+
+    // TODO: These likely won't stay here
+    // reliability control
+    sequence_num: u16,
+    local_acks: LocalAckRecord,
+    external_acks: ExternalAcks,
 }
 
 impl VirtualConnection {
@@ -28,7 +37,10 @@ impl VirtualConnection {
         Self {
             last_packet_time: Instant::now(),
             remote_address,
-            max_packet_size_bytes: config.max_packet_size_bytes()
+            max_packet_size_bytes: config.max_packet_size_bytes(),
+            sequence_num: 0,
+            local_acks: LocalAckRecord::default(),
+            external_acks: ExternalAcks::default()
         }
     }
 
@@ -39,6 +51,7 @@ impl VirtualConnection {
     /// 2. In the case of the packet being queued for ordering and we are waiting on older packets
     ///    first.
     pub fn process_incoming(&mut self, payload: &[u8]) -> io::Result<Option<Packet>> {
+        // TODO: Only implementing the reliable packets currently
         self.last_packet_time = Instant::now();
 
         let mut cursor = io::Cursor::new(payload);
@@ -62,13 +75,30 @@ impl VirtualConnection {
             return Err(PacketError::ExceededMaxPacketSize.into());
         }
 
+        let typed_header = match packet.delivery_method() {
+            // TODO: Only implementing the reliable packets currently
+            DeliveryMethod::ReliableUnordered => {
+                // Queue packet for awaiting acknowledgement.
+                self.local_acks.enqueue(self.sequence_num, packet.payload());
 
-        let header = StandardHeader::new(packet.delivery_method(), PacketTypeId::Packet);
-        let mut buffer = Vec::with_capacity(header.size() + packet.payload().len());
-        header.write(&mut buffer)?;
-        buffer.extend(packet.payload());
+                let header = ReliableHeader::new(
+                    self.sequence_num,
+                    self.external_acks.last_acked(),
+                    self.external_acks.ack_field()
+                );
 
-        Ok(ProcessedPacket::new(packet.address(), buffer))
+                // Increase local sequence number.
+                self.sequence_num = self.sequence_num.wrapping_add(1);
+                header;
+            }
+            _ => {}
+        };
+
+        Ok(ProcessedPacket::new(
+            packet.address(),
+            packet.delivery_method(),
+            packet.payload(),
+        ))
     }
 
     /// Represents the duration since we last received a packet from this client

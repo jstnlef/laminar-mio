@@ -92,7 +92,7 @@ impl HeaderWriter for FragmentHeader {
 }
 
 impl HeaderReader for FragmentHeader {
-    type Header = io::Result<FragmentHeader>;
+    type Header = io::Result<Self>;
 
     fn read(rdr: &mut io::Cursor<&[u8]>) -> Self::Header {
         let standard_header = StandardHeader::read(rdr)?;

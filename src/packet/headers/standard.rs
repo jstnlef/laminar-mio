@@ -55,7 +55,7 @@ impl HeaderWriter for StandardHeader {
 }
 
 impl HeaderReader for StandardHeader {
-    type Header = io::Result<StandardHeader>;
+    type Header = io::Result<Self>;
 
     fn read(rdr: &mut io::Cursor<&[u8]>) -> Self::Header {
         let protocol_version = rdr.read_u32::<BigEndian>()?;
