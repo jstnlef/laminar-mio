@@ -2,6 +2,7 @@ mod virtual_connection;
 
 use self::virtual_connection::VirtualConnection;
 
+use crate::config::SocketConfig;
 use std::{collections::HashMap, net::SocketAddr, time::Duration};
 
 /// Maintains a registry of active "connections". Essentially, when we receive a packet on the
@@ -19,10 +20,10 @@ impl ActiveConnections {
 
     /// Try to get a VirtualConnection by address. If the connection does not exist, it will be
     /// inserted and returned.
-    pub fn get_or_insert_connection(&mut self, address: &SocketAddr) -> &mut VirtualConnection {
+    pub fn get_or_insert_connection(&mut self, address: &SocketAddr, config: &SocketConfig) -> &mut VirtualConnection {
         if !self.connections.contains_key(address) {
             self.connections
-                .insert(*address, VirtualConnection::new(*address));
+                .insert(*address, VirtualConnection::new(*address, config));
         }
         self.connections
             .get_mut(address)
@@ -54,7 +55,7 @@ impl ActiveConnections {
 
 #[cfg(test)]
 mod tests {
-    use super::ActiveConnections;
+    use super::{ActiveConnections, SocketConfig};
     use std::{thread, time::Duration};
 
     const ADDRESS: &str = "127.0.0.1:12345";
@@ -62,10 +63,11 @@ mod tests {
     #[test]
     fn connection_timed_out() {
         let mut connections = ActiveConnections::new();
+        let config = SocketConfig::default();
 
         // add 10 clients
         for i in 0..10 {
-            connections.get_or_insert_connection(&(format!("127.0.0.1:123{}", i).parse().unwrap()));
+            connections.get_or_insert_connection(&(format!("127.0.0.1:123{}", i).parse().unwrap()), &config);
         }
 
         assert_eq!(connections.count(), 10);
@@ -81,29 +83,32 @@ mod tests {
     #[test]
     fn insert_connection() {
         let mut connections = ActiveConnections::new();
+        let config = SocketConfig::default();
 
         let address = &("127.0.0.1:12345".parse().unwrap());
-        connections.get_or_insert_connection(address);
+        connections.get_or_insert_connection(address, &config);
         assert!(connections.connections.contains_key(address));
     }
 
     #[test]
     fn insert_existing_connection() {
         let mut connections = ActiveConnections::new();
+        let config = SocketConfig::default();
 
         let address = &("127.0.0.1:12345".parse().unwrap());
-        connections.get_or_insert_connection(address);
+        connections.get_or_insert_connection(address, &config);
         assert!(connections.connections.contains_key(address));
-        connections.get_or_insert_connection(address);
+        connections.get_or_insert_connection(address, &config);
         assert!(connections.connections.contains_key(address));
     }
 
     #[test]
     fn remove_connection() {
         let mut connections = ActiveConnections::new();
+        let config = SocketConfig::default();
 
         let address = &("127.0.0.1:12345".parse().unwrap());
-        connections.get_or_insert_connection(address);
+        connections.get_or_insert_connection(address, &config);
         assert!(connections.connections.contains_key(address));
         connections.remove_connection(address);
         assert!(!connections.connections.contains_key(address));

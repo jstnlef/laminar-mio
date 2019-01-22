@@ -1,4 +1,3 @@
-use crate::packet::headers::HeaderWriter;
 use std::net::SocketAddr;
 
 /// Wrapper struct to hold the fully serialized packet (includes header data)

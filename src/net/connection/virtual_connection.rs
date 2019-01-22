@@ -1,5 +1,6 @@
 use crate::{
-    errors::LaminarError,
+    config::SocketConfig,
+    errors::{LaminarError, PacketError},
     packet::{
         headers::{HeaderReader, HeaderWriter, StandardHeader},
         PacketTypeId, ProcessedPacket,
@@ -18,13 +19,16 @@ pub struct VirtualConnection {
     last_packet_time: Instant,
     /// The address of the remote endpoint
     remote_address: SocketAddr,
+    /// Maximum size a packet can be.
+    max_packet_size_bytes: usize,
 }
 
 impl VirtualConnection {
-    pub fn new(remote_address: SocketAddr) -> Self {
+    pub fn new(remote_address: SocketAddr, config: &SocketConfig) -> Self {
         Self {
             last_packet_time: Instant::now(),
             remote_address,
+            max_packet_size_bytes: config.max_packet_size_bytes()
         }
     }
 
@@ -54,6 +58,11 @@ impl VirtualConnection {
     /// 1. It will append the right header.
     /// 2. It will perform some actions related to how the packet should be delivered.
     pub fn process_outgoing(&mut self, packet: Packet) -> io::Result<ProcessedPacket> {
+        if packet.payload().len() > self.max_packet_size_bytes {
+            return Err(PacketError::ExceededMaxPacketSize.into());
+        }
+
+
         let header = StandardHeader::new(packet.delivery_method(), PacketTypeId::Packet);
         let mut buffer = Vec::with_capacity(header.size() + packet.payload().len());
         header.write(&mut buffer)?;
