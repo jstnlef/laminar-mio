@@ -11,7 +11,7 @@ pub struct ExternalAcks {
     /// numbers before "ack". So let’s say "ack" is 100. If the first bit of "ack bitfield" is set,
     /// then the packet also includes an ack for packet 99. If the second bit is set, then packet
     /// 98 is acked. This goes all the way down to the 32nd bit for packet 68.
-    ack_field: u32
+    ack_field: u32,
 }
 
 impl ExternalAcks {

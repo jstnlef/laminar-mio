@@ -14,7 +14,7 @@ pub enum LaminarError {
     /// Protocol versions did not match
     ProtocolVersionMismatch,
     /// Did not receive enough data
-    ReceivedDataToShort,
+    ReceivedDataTooShort,
 }
 
 impl Display for LaminarError {
@@ -32,7 +32,7 @@ impl Display for LaminarError {
             LaminarError::ProtocolVersionMismatch => {
                 write!(f, "The protocol versions do not match.")
             }
-            LaminarError::ReceivedDataToShort => {
+            LaminarError::ReceivedDataTooShort => {
                 write!(f, "The received data did not have any length.")
             }
         }
@@ -50,6 +50,7 @@ impl Into<io::Error> for LaminarError {
 /// Errors which could occur with constructing/parsing fragment contents
 #[derive(Debug)]
 pub enum FragmentError {
+    /// A packet header was not found in the packet
     PacketHeaderNotFound,
 }
 

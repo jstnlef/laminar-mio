@@ -1,5 +1,6 @@
 use crate::{
     config::SocketConfig,
+    errors::LaminarError,
     net::{connection::ActiveConnections, events::SocketEvent},
     packet::Packet,
 };
@@ -124,6 +125,10 @@ impl RudpSocket {
     /// Receives a single message from the socket. On success, returns the packet containing origin and data.
     fn receive_from_socket(&mut self) -> io::Result<Option<Packet>> {
         let (recv_len, address) = self.socket.recv_from(&mut self.receive_buffer)?;
+        if recv_len <= 0 {
+            return Err(LaminarError::ReceivedDataTooShort.into());
+        }
+
         let received_payload = &self.receive_buffer[..recv_len];
         let connection = self.connections.get_or_insert_connection(&address);
         connection.process_incoming(received_payload)

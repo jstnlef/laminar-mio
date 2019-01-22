@@ -4,7 +4,7 @@ use crate::{
         headers::{HeaderReader, HeaderWriter, StandardHeader},
         PacketTypeId, ProcessedPacket,
     },
-    Packet, protocol_version,
+    protocol_version, Packet,
 };
 use std::{
     fmt, io,
@@ -46,7 +46,7 @@ impl VirtualConnection {
 
         Ok(Some(Packet::reliable_unordered(
             self.remote_address,
-            payload.to_owned(),
+            payload[header.size()..].to_owned(),
         )))
     }
 
@@ -55,7 +55,7 @@ impl VirtualConnection {
     /// 2. It will perform some actions related to how the packet should be delivered.
     pub fn process_outgoing(&mut self, packet: Packet) -> io::Result<ProcessedPacket> {
         let header = StandardHeader::new(packet.delivery_method(), PacketTypeId::Packet);
-        let mut buffer = Vec::with_capacity((header.size() as usize) + packet.payload().len());
+        let mut buffer = Vec::with_capacity(header.size() + packet.payload().len());
         header.write(&mut buffer)?;
         buffer.extend(packet.payload());
 

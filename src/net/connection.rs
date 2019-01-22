@@ -4,8 +4,8 @@ use self::virtual_connection::VirtualConnection;
 
 use std::{collections::HashMap, net::SocketAddr, time::Duration};
 
-///
-///
+/// Maintains a registry of active "connections". Essentially, when we receive a packet on the
+/// socket from a particular `SocketAddr`, we will track information about it here.
 pub struct ActiveConnections {
     connections: HashMap<SocketAddr, VirtualConnection>,
 }
