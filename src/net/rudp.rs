@@ -112,7 +112,7 @@ impl RudpSocket {
         let connection = self
             .connections
             .get_or_insert_connection(&packet.address(), &self.config);
-        let processed = connection.process_outgoing(packet)?;
+        let mut processed = connection.process_outgoing(packet)?;
         let mut bytes_written = 0;
 
         // TODO: Is this where we want to send dropped packets?
@@ -122,8 +122,9 @@ impl RudpSocket {
             }
         }
 
+        let address = processed.address();
         for fragment in processed.fragments(self.config.fragment_size_bytes()) {
-            bytes_written += self.socket.send_to(fragment, &processed.address())?;
+            bytes_written += self.socket.send_to(fragment, &address)?;
         }
 
         Ok(bytes_written)

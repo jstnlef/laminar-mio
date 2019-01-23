@@ -4,7 +4,7 @@ use lazy_static::lazy_static;
 use std::io;
 
 lazy_static! {
-    static ref HEADER_SIZE: usize = calc_header_size::<ReliableHeader>();
+    pub static ref HEADER_SIZE: usize = calc_header_size::<ReliableHeader>();
 }
 
 /// This header provides reliability information to the packet.

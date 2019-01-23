@@ -1,6 +1,6 @@
 use crate::{
     net::DeliveryMethod,
-    packet::headers::{HeaderReader, HeaderWriter, ReliableHeader, StandardHeader},
+    packet::headers::{HeaderReader, HeaderWriter, ReliableHeader, StandardHeader, STANDARD_HEADER_SIZE, RELIABLE_HEADER_SIZE},
     packet::{Packet, PacketTypeId},
 };
 use std::net::SocketAddr;
@@ -9,13 +9,16 @@ use std::net::SocketAddr;
 pub struct ProcessedPacket {
     packet: Packet,
     reliability: Option<ReliableHeader>,
+    serialized: Vec<u8>
 }
 
 impl ProcessedPacket {
     pub fn new(packet: Packet, reliability: Option<ReliableHeader>) -> Self {
+        let size = *STANDARD_HEADER_SIZE + *RELIABLE_HEADER_SIZE + packet.payload.len();
         Self {
             packet,
             reliability,
+            serialized: Vec::with_capacity(size)
         }
     }
 
@@ -25,31 +28,16 @@ impl ProcessedPacket {
     }
 
     /// Returns an iterator yielding payload fragments
-    pub fn fragments(&self, fragment_size: u16) -> impl Iterator<Item = &[u8]> {
-        //        let standard_header = StandardHeader::new(self.packet.delivery_method, PacketTypeId::Packet);
-        //        let mut buffer = Vec::with_capacity(standard_header.size() + self.packet.payload.len());
-        //        standard_header.write(&mut buffer);
-        //        buffer.extend(&self.packet.payload);
+    pub fn fragments(&mut self, fragment_size: u16) -> impl Iterator<Item = &[u8]> {
+        let standard_header = StandardHeader::new(self.packet.delivery_method, PacketTypeId::Packet);
+        standard_header.write(&mut self.serialized);
 
-        // TODO: This needs to be implemented to yield out fragments based on size
-        self.packet.payload.chunks(fragment_size as usize)
+        if let Some(reliability_header) = self.reliability {
+            reliability_header.write(&mut self.serialized);
+        }
+
+        self.serialized.extend(self.packet.payload.iter());
+
+        self.serialized.chunks(self.serialized.len())
     }
 }
-
-//struct FragmentIterator<'a> {
-//
-//}
-
-//impl FragmentIterator {
-//    pub fn new() -> Self {
-//
-//    }
-//}
-
-//impl<'a> Iterator for FragmentIterator<'a> {
-//    type Item = &'a [u8];
-//
-//    fn next(&mut self) -> Option<<Self as Iterator>::Item> {
-//        unimplemented!()
-//    }
-//}

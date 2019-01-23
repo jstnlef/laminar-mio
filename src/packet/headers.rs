@@ -7,7 +7,7 @@ mod standard;
 pub use self::acked::AckedPacketHeader;
 pub use self::fragment::FragmentHeader;
 pub use self::heart_beat::HeartBeatHeader;
-pub use self::reliable::ReliableHeader;
+pub use self::reliable::{ReliableHeader, HEADER_SIZE as RELIABLE_HEADER_SIZE};
 pub use self::standard::{StandardHeader, HEADER_SIZE as STANDARD_HEADER_SIZE};
 
 use std::io;
