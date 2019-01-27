@@ -114,15 +114,15 @@ impl VirtualConnection {
             return Err(PacketError::ExceededMaxPacketSize.into());
         }
 
-        // Queue congestion data.
-        self.congestion_data.insert(
-            CongestionData::new(self.sequence_num, Instant::now()),
-            self.sequence_num,
-        );
-
         let reliability_header = match packet.delivery_method() {
             // TODO: Only implementing the reliable packets currently
             DeliveryMethod::ReliableUnordered => {
+                // Queue congestion data.
+                self.congestion_data.insert(
+                    CongestionData::new(self.sequence_num, Instant::now()),
+                    self.sequence_num,
+                );
+
                 // Queue packet for awaiting acknowledgement.
                 self.local_acks.enqueue(self.sequence_num, packet.payload());
 
