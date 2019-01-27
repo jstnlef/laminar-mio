@@ -22,7 +22,6 @@
 
 #![warn(missing_docs)]
 
-
 /// Contains information about the laminar protocol version
 pub mod protocol_version;
 
@@ -39,5 +38,5 @@ mod packet;
 mod sequence_buffer;
 
 pub use self::net::DeliveryMethod;
-pub use self::packet::Packet;
 pub use self::net::SocketEvent;
+pub use self::packet::Packet;

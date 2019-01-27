@@ -1,6 +1,9 @@
 use crate::{
     net::DeliveryMethod,
-    packet::headers::{HeaderReader, HeaderWriter, ReliableHeader, StandardHeader, STANDARD_HEADER_SIZE, RELIABLE_HEADER_SIZE},
+    packet::headers::{
+        HeaderReader, HeaderWriter, ReliableHeader, StandardHeader, RELIABLE_HEADER_SIZE,
+        STANDARD_HEADER_SIZE,
+    },
     packet::{Packet, PacketTypeId},
 };
 use std::net::SocketAddr;
@@ -9,7 +12,7 @@ use std::net::SocketAddr;
 pub struct ProcessedPacket {
     packet: Packet,
     reliability: Option<ReliableHeader>,
-    serialized: Vec<u8>
+    serialized: Vec<u8>,
 }
 
 impl ProcessedPacket {
@@ -18,7 +21,7 @@ impl ProcessedPacket {
         Self {
             packet,
             reliability,
-            serialized: Vec::with_capacity(size)
+            serialized: Vec::with_capacity(size),
         }
     }
 
@@ -29,7 +32,8 @@ impl ProcessedPacket {
 
     /// Returns an iterator yielding payload fragments
     pub fn fragments(&mut self, fragment_size: u16) -> impl Iterator<Item = &[u8]> {
-        let standard_header = StandardHeader::new(self.packet.delivery_method, PacketTypeId::Packet);
+        let standard_header =
+            StandardHeader::new(self.packet.delivery_method, PacketTypeId::Packet);
         standard_header.write(&mut self.serialized);
 
         if let Some(reliability_header) = self.reliability {

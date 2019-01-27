@@ -16,7 +16,7 @@ pub enum NetworkQuality {
 /// It is able to smooth out the network jitter if there is any.
 pub struct RttMeasurer {
     rtt_max_value: i64,
-    rtt_smoothing_factor: f32
+    rtt_smoothing_factor: f32,
 }
 
 impl RttMeasurer {
@@ -24,7 +24,7 @@ impl RttMeasurer {
     pub fn new(config: &SocketConfig) -> RttMeasurer {
         Self {
             rtt_max_value: i64::from(config.rtt_max_value()),
-            rtt_smoothing_factor: config.rtt_smoothing_factor()
+            rtt_smoothing_factor: config.rtt_smoothing_factor(),
         }
     }
 
@@ -88,8 +88,7 @@ mod test {
         let mut addr = format!("{}:{}", TEST_HOST_IP, TEST_PORT)
             .to_socket_addrs()
             .unwrap();
-        let _new_conn =
-            VirtualConnection::new(addr.next().unwrap(), &SocketConfig::default());
+        let _new_conn = VirtualConnection::new(addr.next().unwrap(), &SocketConfig::default());
     }
 
     #[test]

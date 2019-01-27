@@ -7,8 +7,9 @@ use crate::{
         headers::{HeaderReader, HeaderWriter, ReliableHeader, StandardHeader},
         PacketTypeId, ProcessedPacket,
     },
-    protocol_version, Packet,
-    sequence_buffer::{CongestionData, SequenceBuffer}
+    protocol_version,
+    sequence_buffer::{CongestionData, SequenceBuffer},
+    Packet,
 };
 use std::{
     fmt, io,
