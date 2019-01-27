@@ -1,3 +1,4 @@
+use super::RttMeasurer;
 use crate::{
     config::SocketConfig,
     errors::{LaminarError, PacketError},
@@ -7,6 +8,7 @@ use crate::{
         PacketTypeId, ProcessedPacket,
     },
     protocol_version, Packet,
+    sequence_buffer::{CongestionData, SequenceBuffer}
 };
 use std::{
     fmt, io,
@@ -30,6 +32,11 @@ pub struct VirtualConnection {
     local_acks: LocalAckRecord,
     external_acks: ExternalAcks,
     dropped_packets: Vec<Box<[u8]>>,
+
+    // congestion control
+    rtt_measurer: RttMeasurer,
+    congestion_data: SequenceBuffer<CongestionData>,
+    rtt: f32,
 }
 
 impl VirtualConnection {
@@ -38,10 +45,17 @@ impl VirtualConnection {
             last_packet_time: Instant::now(),
             remote_address,
             max_packet_size_bytes: config.max_packet_size_bytes(),
+
+            // reliability control
             sequence_num: 0,
             local_acks: LocalAckRecord::default(),
             external_acks: ExternalAcks::default(),
             dropped_packets: Vec::new(),
+
+            // congestion control
+            rtt_measurer: RttMeasurer::new(&config),
+            congestion_data: SequenceBuffer::with_capacity(<u16>::max_value() as usize),
+            rtt: 0.0,
         }
     }
 
@@ -67,9 +81,9 @@ impl VirtualConnection {
                 let reliable_header = ReliableHeader::read(&mut cursor)?;
                 self.external_acks.ack(reliable_header.sequence_num());
 
-                //                // Update congestion information.
-                //                let congestion_data = self.congestion_data.get_mut(acked_header.ack_seq());
-                //                self.rtt = self.rtt_measurer.get_rtt(congestion_data);
+                // Update congestion information.
+                let congestion_data = self.congestion_data.get_mut(reliable_header.last_acked());
+                self.rtt = self.rtt_measurer.get_rtt(congestion_data);
 
                 // Update dropped packets if there are any.
                 let dropped_packets = self
@@ -100,11 +114,11 @@ impl VirtualConnection {
             return Err(PacketError::ExceededMaxPacketSize.into());
         }
 
-        //        // Queue congestion data.
-        //        self.congestion_data.insert(
-        //            CongestionData::new(self.seq_num, Instant::now()),
-        //            self.seq_num,
-        //        );
+        // Queue congestion data.
+        self.congestion_data.insert(
+            CongestionData::new(self.sequence_num, Instant::now()),
+            self.sequence_num,
+        );
 
         let reliability_header = match packet.delivery_method() {
             // TODO: Only implementing the reliable packets currently

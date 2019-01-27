@@ -22,6 +22,16 @@ pub struct SocketConfig {
     /// This is the size of the buffer the underlying UDP socket reads data into.
     /// Default: Max MTU - 1500 bytes
     receive_buffer_size_bytes: usize,
+    /// This is the maximal round trip time (rtt) for packet.
+    ///
+    /// Recommend value: 250 ms
+    /// Value is represented in milliseconds.
+    rtt_max_value: u16,
+    /// This is the factor which will smooth out network jitter. So that if one packet is not arrived fast we don't wan't to directly transform to an bad network.
+    ///
+    /// Recommended value: 10% of the rtt time.
+    /// Value is a ratio (0 = 0% and 1 = 100%)
+    rtt_smoothing_factor: f32,
     // This is the size of the event buffer we read socket events (from `mio::Poll`) into.
     socket_event_buffer_size: usize,
     /// Optional duration specifying how long we should block polling for socket events.
@@ -61,6 +71,16 @@ impl SocketConfig {
     }
 
     #[inline]
+    pub const fn rtt_max_value(&self) -> u16 {
+        self.rtt_max_value
+    }
+
+    #[inline]
+    pub const fn rtt_smoothing_factor(&self) -> f32 {
+        self.rtt_smoothing_factor
+    }
+
+    #[inline]
     pub const fn socket_polling_timeout(&self) -> Option<Duration> {
         self.socket_polling_timeout
     }
@@ -73,6 +93,8 @@ impl Default for SocketConfig {
             idle_connection_timeout: Duration::from_secs(5),
             max_fragments: 16,
             receive_buffer_size_bytes: 1500,
+            rtt_smoothing_factor: 0.10,
+            rtt_max_value: 250,
             socket_event_buffer_size: 1024,
             socket_polling_timeout: Some(Duration::from_millis(100)),
         }
