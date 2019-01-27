@@ -13,8 +13,8 @@ use std::{
 
 const SOCKET: Token = Token(0);
 
-/// An RUDP socket implementation with configurable reliability and ordering guarantees.
-pub struct RudpSocket {
+/// A reliable UDP socket implementation with configurable reliability and ordering guarantees.
+pub struct LaminarSocket {
     socket: mio::net::UdpSocket,
     config: SocketConfig,
     connections: ActiveConnections,
@@ -23,7 +23,7 @@ pub struct RudpSocket {
     packet_receiver: mpsc::Receiver<Packet>,
 }
 
-impl RudpSocket {
+impl LaminarSocket {
     /// Binds to the socket and then sets up `ActiveConnections` to manage the "connections".
     /// Because UDP connections are not persistent, we can only infer the status of the remote
     /// endpoint by looking to see if they are still sending packets or not
@@ -166,7 +166,7 @@ impl RudpSocket {
     }
 }
 
-impl Evented for RudpSocket {
+impl Evented for LaminarSocket {
     fn register(
         &self,
         poll: &Poll,

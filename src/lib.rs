@@ -11,4 +11,7 @@ pub mod errors;
 pub mod net;
 
 mod packet;
+
+pub use self::net::DeliveryMethod;
 pub use self::packet::Packet;
+pub use self::net::SocketEvent;

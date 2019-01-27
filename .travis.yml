@@ -1,0 +1,57 @@
+# Set up the Rust toolchain.
+language: rust
+rust:
+  - stable
+  - beta
+  - nightly
+
+before_script:
+  - rustup component add clippy
+  - export PATH=$PATH:/home/travis/.cargo/bin
+  - export RUSTFLAGS="-D warnings"
+
+os:
+- linux
+- osx
+- windows
+
+branches:
+  only:
+    - staging
+    - trying
+    - master
+    - /release-.*/
+
+# Allow for occasional compiler breakage on nightly Rust.
+matrix:
+  allow_failures:
+    - rust: nightly
+  fast_finish: true
+  include:
+    - rust: stable
+      script:
+        - rustup component add rustfmt
+        - cargo fmt -- --check
+  include:
+    - rust: stable
+      script:
+        - cargo test --verbose --all --all-features
+        - ./ci/coverage.sh
+
+
+
+
+addons:
+  apt:
+    packages:
+      - libcurl4-openssl-dev
+      - libelf-dev
+      - libdw-dev
+      - cmake
+      - gcc
+      - binutils-dev
+      - libiberty-dev
+
+script:
+  - cargo clippy --all --all-features -- -D warnings
+  - cargo test --verbose --all --all-features

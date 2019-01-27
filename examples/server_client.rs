@@ -5,7 +5,7 @@ use std::{io, io::stdin};
 
 use laminar::{
     config::SocketConfig,
-    net::{RudpSocket, SocketEvent},
+    net::{LaminarSocket, SocketEvent},
     Packet,
 };
 use std::thread;
@@ -14,7 +14,7 @@ const SERVER: &str = "127.0.0.1:12351";
 
 fn server() -> Result<(), io::Error> {
     let (mut socket, packet_sender, event_receiver) =
-        RudpSocket::bind(SERVER, SocketConfig::default())?;
+        LaminarSocket::bind(SERVER, SocketConfig::default())?;
     let _thread = thread::spawn(move || socket.start_polling());
 
     println!("Listening for connections to {}", SERVER);
@@ -52,7 +52,7 @@ fn server() -> Result<(), io::Error> {
 
 fn client() -> Result<(), io::Error> {
     let (mut socket, packet_sender, event_receiver) =
-        RudpSocket::bind("127.0.0.1:12352", SocketConfig::default())?;
+        LaminarSocket::bind("127.0.0.1:12352", SocketConfig::default())?;
     println!("Connected on {}", socket.local_addr()?);
     let _thread = thread::spawn(move || socket.start_polling());
 

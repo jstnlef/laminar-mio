@@ -28,3 +28,9 @@ crc = "1.8"
 lazy_static = "1.1"
 log = "0.4"
 mio = "0.6"
+
+[dev-dependencies]
+bincode = "1.0"
+criterion = "0.2"
+serde = "1.0"
+serde_derive = "1.0"
