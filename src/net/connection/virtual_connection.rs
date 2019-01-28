@@ -5,7 +5,7 @@ use crate::{
     net::{DeliveryMethod, ExternalAcks, LocalAckRecord},
     packet::{
         headers::{HeaderReader, ReliableHeader, StandardHeader},
-        ProcessedPacket,
+        PacketType, ProcessedPacket,
     },
     protocol_version,
     sequence_buffer::{CongestionData, SequenceBuffer},
@@ -77,6 +77,10 @@ impl VirtualConnection {
             return Err(LaminarError::ProtocolVersionMismatch.into());
         }
 
+        if standard_header.packet_type() == PacketType::Fragment {
+
+        }
+
         match standard_header.delivery_method() {
             DeliveryMethod::ReliableUnordered => {
                 let reliable_header = ReliableHeader::read(&mut cursor)?;
@@ -98,7 +102,7 @@ impl VirtualConnection {
 
         // Read the rest of the bytes from the cursor to get the payload.
         let mut payload = Vec::with_capacity(payload.len());
-        cursor.read_to_end(&mut payload);
+        cursor.read_to_end(&mut payload)?;
 
         Ok(Some(Packet::new(
             self.remote_address,

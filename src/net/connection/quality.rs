@@ -76,7 +76,6 @@ mod test {
     use crate::config::SocketConfig;
     use crate::net::connection::VirtualConnection;
     use std::net::ToSocketAddrs;
-    use std::sync::Arc;
     use std::time::Duration;
 
     static TEST_HOST_IP: &'static str = "127.0.0.1";

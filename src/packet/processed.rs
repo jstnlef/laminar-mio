@@ -1,11 +1,9 @@
 use crate::{
     errors::FragmentError,
-    net::DeliveryMethod,
     packet::headers::{
-        FragmentHeader, HeaderReader, HeaderWriter, ReliableHeader, StandardHeader,
-        RELIABLE_HEADER_SIZE, STANDARD_HEADER_SIZE,
+        FragmentHeader, HeaderReader, HeaderWriter, ReliableHeader, StandardHeader
     },
-    packet::{Packet, PacketTypeId},
+    packet::{Packet, PacketType},
 };
 use std::{
     io::{self, Write},
@@ -66,7 +64,7 @@ impl ProcessedPacket {
         // Calculate the buffer size
         let standard_header = StandardHeader::new(
             self.packet.delivery_method,
-            PacketTypeId::Packet,
+            PacketType::Packet,
             self.sequence_num,
         );
 
@@ -93,7 +91,7 @@ impl ProcessedPacket {
     fn serialize_fragmented(&mut self, num_fragments: u8, fragment_size: u16) -> io::Result<()> {
         let standard_header = StandardHeader::new(
             self.packet.delivery_method,
-            PacketTypeId::Fragment,
+            PacketType::Fragment,
             self.sequence_num,
         );
 
@@ -174,7 +172,10 @@ fn total_fragments_needed(payload_length: usize, fragment_size: u16) -> u16 {
 
 #[cfg(test)]
 mod tests {
-    use super::{FragmentHeader, HeaderReader, ProcessedPacket, ReliableHeader, StandardHeader};
+    use super::{
+        total_fragments_needed, FragmentHeader, HeaderReader, ProcessedPacket, ReliableHeader,
+        StandardHeader,
+    };
     use crate::Packet;
     use std::io::{Cursor, Read};
     use std::net::SocketAddr;
@@ -296,5 +297,14 @@ mod tests {
             cursor.read_to_end(&mut deserialized_message).unwrap();
             assert!(deserialized_message.len() <= 5);
         }
+    }
+
+    #[test]
+    pub fn total_fragments_needed_test() {
+        let fragment_number = total_fragments_needed(4000, 1024);
+        let fragment_number1 = total_fragments_needed(500, 1024);
+
+        assert_eq!(fragment_number, 4);
+        assert_eq!(fragment_number1, 1);
     }
 }

@@ -94,7 +94,7 @@ mod tests {
         let mut connections = ActiveConnections::new();
         let config = SocketConfig::default();
 
-        let address = &("127.0.0.1:12345".parse().unwrap());
+        let address = &ADDRESS.parse().unwrap();
         connections.get_or_insert_connection(address, &config);
         assert!(connections.connections.contains_key(address));
     }
@@ -104,7 +104,7 @@ mod tests {
         let mut connections = ActiveConnections::new();
         let config = SocketConfig::default();
 
-        let address = &("127.0.0.1:12345".parse().unwrap());
+        let address = &ADDRESS.parse().unwrap();
         connections.get_or_insert_connection(address, &config);
         assert!(connections.connections.contains_key(address));
         connections.get_or_insert_connection(address, &config);
@@ -116,7 +116,7 @@ mod tests {
         let mut connections = ActiveConnections::new();
         let config = SocketConfig::default();
 
-        let address = &("127.0.0.1:12345".parse().unwrap());
+        let address = &ADDRESS.parse().unwrap();
         connections.get_or_insert_connection(address, &config);
         assert!(connections.connections.contains_key(address));
         connections.remove_connection(address);
@@ -127,7 +127,7 @@ mod tests {
     fn remove_non_existing_connection() {
         let mut connections = ActiveConnections::new();
 
-        let address = &("127.0.0.1:12345".parse().unwrap());
+        let address = &ADDRESS.parse().unwrap();
         connections.remove_connection(address);
         assert!(!connections.connections.contains_key(address));
     }

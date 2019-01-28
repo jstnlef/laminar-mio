@@ -10,6 +10,7 @@ use std::{
     net::{SocketAddr, ToSocketAddrs},
     sync::mpsc,
 };
+use log::error;
 
 const SOCKET: Token = Token(0);
 
@@ -51,10 +52,10 @@ impl LaminarSocket {
         loop {
             self.handle_idle_clients();
             if let Err(e) = poll.poll(events_ref, self.config.socket_polling_timeout()) {
-                eprintln!("{:?}", e);
+                error!("Error polling the socket: {:?}", e);
             }
             if let Err(e) = self.process_events(events_ref) {
-                eprintln!("{:?}", e);
+                error!("Error processing events: {:?}", e);
             }
             // XXX: I'm fairly certain this isn't exactly safe. I'll likely need to add some
             // handling for when the socket is blocked on send. Worth some more research.
@@ -62,7 +63,7 @@ impl LaminarSocket {
             // so maybe it's work switching to that while providing the same interface?
             for packet in packet_receiver.try_iter() {
                 if let Err(e) = self.send_to(packet) {
-                    eprintln!("{:?}", e);
+                    error!("Error sending packet: {:?}", e);
                 }
             }
         }
@@ -91,14 +92,11 @@ impl LaminarSocket {
                         loop {
                             match self.receive_from() {
                                 Ok(Some(packet)) => {
-                                    self.event_sender.send(SocketEvent::Packet(packet))
+                                    self.event_sender.send(SocketEvent::Packet(packet));
                                 }
                                 Ok(None) => continue,
                                 Err(ref err) if err.kind() == io::ErrorKind::WouldBlock => break,
-                                Err(e) => {
-                                    eprintln!("{:?}", e);
-                                    continue;
-                                }
+                                Err(e) => error!("{:?}", e)
                             };
                         }
                     }

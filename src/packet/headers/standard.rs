@@ -1,5 +1,5 @@
 use super::{calc_header_size, HeaderReader, HeaderWriter};
-use crate::{net::DeliveryMethod, packet::PacketTypeId, protocol_version};
+use crate::{net::DeliveryMethod, packet::PacketType, protocol_version};
 use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
 use lazy_static::lazy_static;
 use std::io;
@@ -14,7 +14,7 @@ pub struct StandardHeader {
     /// crc32 of the protocol version.
     protocol_version: u32,
     /// specifies the packet type.
-    packet_type: PacketTypeId,
+    packet_type: PacketType,
     /// specifies how this packet should be processed.
     delivery_method: DeliveryMethod,
     /// This is the sequence number. This is used for both reliability and fragmentation
@@ -25,7 +25,7 @@ impl StandardHeader {
     /// Create new standard header.
     pub fn new(
         delivery_method: DeliveryMethod,
-        packet_type: PacketTypeId,
+        packet_type: PacketType,
         sequence_num: u16,
     ) -> Self {
         StandardHeader {
@@ -42,7 +42,7 @@ impl StandardHeader {
     }
 
     #[inline]
-    pub fn packet_type(&self) -> PacketTypeId {
+    pub fn packet_type(&self) -> PacketType {
         self.packet_type
     }
 
@@ -59,14 +59,14 @@ impl StandardHeader {
 
 impl Default for StandardHeader {
     fn default() -> Self {
-        StandardHeader::new(DeliveryMethod::UnreliableUnordered, PacketTypeId::Packet, 0)
+        StandardHeader::new(DeliveryMethod::UnreliableUnordered, PacketType::Packet, 0)
     }
 }
 
 impl HeaderWriter for StandardHeader {
     fn write(&self, buffer: &mut Vec<u8>) -> io::Result<()> {
         buffer.write_u32::<BigEndian>(self.protocol_version)?;
-        buffer.write_u8(PacketTypeId::get_id(self.packet_type))?;
+        buffer.write_u8(PacketType::get_id(self.packet_type))?;
         buffer.write_u8(DeliveryMethod::get_delivery_method_id(self.delivery_method))?;
         buffer.write_u16::<BigEndian>(self.sequence_num)?;
         Ok(())
@@ -84,7 +84,7 @@ impl HeaderReader for StandardHeader {
 
         let header = Self {
             protocol_version,
-            packet_type: PacketTypeId::get_packet_type(packet_id),
+            packet_type: PacketType::get_packet_type(packet_id),
             delivery_method: DeliveryMethod::get_delivery_method_from_id(delivery_method_id),
             sequence_num,
         };
@@ -102,7 +102,7 @@ impl HeaderReader for StandardHeader {
 mod tests {
     use super::{HeaderReader, HeaderWriter, StandardHeader};
     use crate::net::DeliveryMethod;
-    use crate::packet::PacketTypeId;
+    use crate::packet::PacketType;
     use crate::protocol_version;
     use std::io::Cursor;
 
@@ -118,7 +118,7 @@ mod tests {
         assert!(protocol_version::valid_version(
             packet_header.protocol_version
         ));
-        assert_eq!(packet_header.packet_type, PacketTypeId::Packet);
+        assert_eq!(packet_header.packet_type, PacketType::Packet);
         assert_eq!(
             packet_header.delivery_method,
             DeliveryMethod::UnreliableUnordered

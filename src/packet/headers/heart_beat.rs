@@ -1,5 +1,5 @@
 use super::{calc_header_size, HeaderReader, HeaderWriter};
-use crate::{packet::PacketTypeId, protocol_version};
+use crate::{packet::PacketType, protocol_version};
 use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
 use lazy_static::lazy_static;
 use std::io;
@@ -12,14 +12,14 @@ lazy_static! {
 /// A heart beat just keeps the client awake.
 #[derive(Copy, Clone, Debug)]
 pub struct HeartBeatHeader {
-    packet_type_id: PacketTypeId,
+    packet_type_id: PacketType,
 }
 
 impl HeartBeatHeader {
     /// Create new heartbeat header.
     pub fn new() -> Self {
         HeartBeatHeader {
-            packet_type_id: PacketTypeId::HeartBeat,
+            packet_type_id: PacketType::HeartBeat,
         }
     }
 }
@@ -33,7 +33,7 @@ impl Default for HeartBeatHeader {
 impl HeaderWriter for HeartBeatHeader {
     fn write(&self, buffer: &mut Vec<u8>) -> io::Result<()> {
         buffer.write_u32::<BigEndian>(protocol_version::get_crc32())?;
-        buffer.write_u8(PacketTypeId::get_id(self.packet_type_id))?;
+        buffer.write_u8(PacketType::get_id(self.packet_type_id))?;
         Ok(())
     }
 }
@@ -45,7 +45,7 @@ impl HeaderReader for HeartBeatHeader {
         let _ = rdr.read_u32::<BigEndian>()?;
         let _ = rdr.read_u8();
         let header = Self {
-            packet_type_id: PacketTypeId::HeartBeat,
+            packet_type_id: PacketType::HeartBeat,
         };
 
         Ok(header)

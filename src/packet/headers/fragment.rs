@@ -1,6 +1,5 @@
 use super::{calc_header_size, HeaderReader, HeaderWriter};
-use crate::errors::FragmentError;
-use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
+use byteorder::{ReadBytesExt, WriteBytesExt};
 use lazy_static::lazy_static;
 use std::io;
 
@@ -69,7 +68,7 @@ impl HeaderReader for FragmentHeader {
 mod tests {
     use super::{FragmentHeader, HeaderReader, HeaderWriter};
     use crate::net::DeliveryMethod;
-    use crate::packet::PacketTypeId;
+    use crate::packet::PacketType;
     use std::io::Cursor;
 
     #[test]
