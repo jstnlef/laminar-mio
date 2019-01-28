@@ -34,7 +34,6 @@ impl HeaderWriter for HeartBeatHeader {
     fn write(&self, buffer: &mut Vec<u8>) -> io::Result<()> {
         buffer.write_u32::<BigEndian>(protocol_version::get_crc32())?;
         buffer.write_u8(PacketTypeId::get_id(self.packet_type_id))?;
-
         Ok(())
     }
 }

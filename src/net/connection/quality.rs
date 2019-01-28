@@ -1,7 +1,6 @@
 use crate::config::SocketConfig;
 use crate::sequence_buffer::CongestionData;
 
-use std::sync::Arc;
 use std::time::Duration;
 
 /// Represents the quality of a network.
@@ -105,7 +104,7 @@ mod test {
 
     #[test]
     fn smooth_out_rtt() {
-        let mut config = SocketConfig::default();
+        let config = SocketConfig::default();
 
         let network_quality = RttMeasurer::new(&config);
         let smoothed_rtt = network_quality.smooth_out_rtt(300);

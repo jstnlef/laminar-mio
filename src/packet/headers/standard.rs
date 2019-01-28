@@ -17,34 +17,49 @@ pub struct StandardHeader {
     packet_type: PacketTypeId,
     /// specifies how this packet should be processed.
     delivery_method: DeliveryMethod,
+    /// This is the sequence number. This is used for both reliability and fragmentation
+    sequence_num: u16,
 }
 
 impl StandardHeader {
     /// Create new standard header.
-    pub fn new(delivery_method: DeliveryMethod, packet_type: PacketTypeId) -> Self {
+    pub fn new(
+        delivery_method: DeliveryMethod,
+        packet_type: PacketTypeId,
+        sequence_num: u16,
+    ) -> Self {
         StandardHeader {
             protocol_version: protocol_version::get_crc32(),
             packet_type,
             delivery_method,
+            sequence_num,
         }
     }
 
+    #[inline]
     pub fn protocol_version(&self) -> u32 {
         self.protocol_version
     }
 
+    #[inline]
     pub fn packet_type(&self) -> PacketTypeId {
         self.packet_type
     }
 
+    #[inline]
     pub fn delivery_method(&self) -> DeliveryMethod {
         self.delivery_method
+    }
+
+    #[inline]
+    pub fn sequence_num(&self) -> u16 {
+        self.sequence_num
     }
 }
 
 impl Default for StandardHeader {
     fn default() -> Self {
-        StandardHeader::new(DeliveryMethod::UnreliableUnordered, PacketTypeId::Packet)
+        StandardHeader::new(DeliveryMethod::UnreliableUnordered, PacketTypeId::Packet, 0)
     }
 }
 
@@ -53,7 +68,7 @@ impl HeaderWriter for StandardHeader {
         buffer.write_u32::<BigEndian>(self.protocol_version)?;
         buffer.write_u8(PacketTypeId::get_id(self.packet_type))?;
         buffer.write_u8(DeliveryMethod::get_delivery_method_id(self.delivery_method))?;
-
+        buffer.write_u16::<BigEndian>(self.sequence_num)?;
         Ok(())
     }
 }
@@ -65,11 +80,13 @@ impl HeaderReader for StandardHeader {
         let protocol_version = rdr.read_u32::<BigEndian>()?;
         let packet_id = rdr.read_u8()?;
         let delivery_method_id = rdr.read_u8()?;
+        let sequence_num = rdr.read_u16::<BigEndian>()?;
 
         let header = Self {
             protocol_version,
             packet_type: PacketTypeId::get_packet_type(packet_id),
             delivery_method: DeliveryMethod::get_delivery_method_from_id(delivery_method_id),
+            sequence_num,
         };
 
         Ok(header)
@@ -110,6 +127,6 @@ mod tests {
 
     #[test]
     pub fn header_size_test() {
-        assert_eq!(StandardHeader::default().size(), 6);
+        assert_eq!(StandardHeader::default().size(), 8);
     }
 }

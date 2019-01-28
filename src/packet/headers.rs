@@ -1,10 +1,8 @@
-mod acked;
 mod fragment;
 mod heart_beat;
 mod reliable;
 mod standard;
 
-pub use self::acked::AckedPacketHeader;
 pub use self::fragment::FragmentHeader;
 pub use self::heart_beat::HeartBeatHeader;
 pub use self::reliable::{ReliableHeader, HEADER_SIZE as RELIABLE_HEADER_SIZE};

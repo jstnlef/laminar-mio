@@ -4,8 +4,8 @@ use crate::{
     errors::{LaminarError, PacketError},
     net::{DeliveryMethod, ExternalAcks, LocalAckRecord},
     packet::{
-        headers::{HeaderReader, HeaderWriter, ReliableHeader, StandardHeader},
-        PacketTypeId, ProcessedPacket,
+        headers::{HeaderReader, ReliableHeader, StandardHeader},
+        ProcessedPacket,
     },
     protocol_version,
     sequence_buffer::{CongestionData, SequenceBuffer},
@@ -80,7 +80,7 @@ impl VirtualConnection {
         match standard_header.delivery_method() {
             DeliveryMethod::ReliableUnordered => {
                 let reliable_header = ReliableHeader::read(&mut cursor)?;
-                self.external_acks.ack(reliable_header.sequence_num());
+                self.external_acks.ack(standard_header.sequence_num());
 
                 // Update congestion information.
                 let congestion_data = self.congestion_data.get_mut(reliable_header.last_acked());
@@ -128,19 +128,21 @@ impl VirtualConnection {
                 self.local_acks.enqueue(self.sequence_num, packet.payload());
 
                 let header = ReliableHeader::new(
-                    self.sequence_num,
                     self.external_acks.last_acked(),
                     self.external_acks.ack_field(),
                 );
 
-                // Increase local sequence number.
-                self.sequence_num = self.sequence_num.wrapping_add(1);
                 Some(header)
             }
             _ => None,
         };
 
-        Ok(ProcessedPacket::new(packet, reliability_header))
+        let processed_packet = ProcessedPacket::new(self.sequence_num, packet, reliability_header);
+
+        // Increase local sequence number.
+        self.sequence_num = self.sequence_num.wrapping_add(1);
+
+        Ok(processed_packet)
     }
 
     /// Represents the duration since we last received a packet from this client

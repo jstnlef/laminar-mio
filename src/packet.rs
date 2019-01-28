@@ -3,7 +3,7 @@ pub mod headers;
 mod packet_type;
 mod processed;
 
-pub use self::packet_type::{PacketType, PacketTypeId};
+pub use self::packet_type::PacketTypeId;
 pub use self::processed::ProcessedPacket;
 
 use crate::net::DeliveryMethod;

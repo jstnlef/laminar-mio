@@ -59,12 +59,17 @@ impl Into<io::Error> for LaminarError {
 pub enum FragmentError {
     /// A packet header was not found in the packet
     PacketHeaderNotFound,
+    /// Max number of allowed fragments has been exceeded
+    ExceededMaxFragments,
 }
 
 impl Display for FragmentError {
     fn fmt(&self, f: &mut Formatter) -> fmt::Result {
         match self {
             FragmentError::PacketHeaderNotFound => write!(f, "Packet header not found."),
+            FragmentError::ExceededMaxFragments => write!(f,
+                "The total number of required fragments is bigger than the maximum number of allowed fragments."
+            )
         }
     }
 }

@@ -47,16 +47,23 @@ impl LaminarSocket {
         let events_ref = &mut events;
         // Packet receiver MUST only be used in this method.
         let packet_receiver = mem::replace(&mut self.packet_receiver, mpsc::channel().1);
+        // Nothing should break out of this loop!
         loop {
             self.handle_idle_clients();
-            poll.poll(events_ref, self.config.socket_polling_timeout())?;
-            self.process_events(events_ref)?;
+            if let Err(e) = poll.poll(events_ref, self.config.socket_polling_timeout()) {
+                eprintln!("{:?}", e);
+            }
+            if let Err(e) = self.process_events(events_ref) {
+                eprintln!("{:?}", e);
+            }
             // XXX: I'm fairly certain this isn't exactly safe. I'll likely need to add some
             // handling for when the socket is blocked on send. Worth some more research.
             // Alternatively, I'm sure the Tokio single threaded runtime does handle this for us
             // so maybe it's work switching to that while providing the same interface?
             for packet in packet_receiver.try_iter() {
-                self.send_to_socket(packet)?;
+                if let Err(e) = self.send_to(packet) {
+                    eprintln!("{:?}", e);
+                }
             }
         }
     }
@@ -82,7 +89,7 @@ impl LaminarSocket {
                 SOCKET => {
                     if event.readiness().is_readable() {
                         loop {
-                            match self.receive_from_socket() {
+                            match self.receive_from() {
                                 Ok(Some(packet)) => {
                                     self.event_sender.send(SocketEvent::Packet(packet))
                                 }
@@ -108,7 +115,7 @@ impl LaminarSocket {
     }
 
     /// Serializes and sends a `Packet` on the socket. On success, returns the number of bytes written.
-    fn send_to_socket(&mut self, packet: Packet) -> io::Result<usize> {
+    fn send_to(&mut self, packet: Packet) -> io::Result<usize> {
         let connection = self
             .connections
             .get_or_insert_connection(&packet.address(), &self.config);
@@ -123,7 +130,10 @@ impl LaminarSocket {
         }
 
         let address = processed.address();
-        for fragment in processed.fragments(self.config.fragment_size_bytes()) {
+        for fragment in processed.fragments(
+            self.config.fragment_size_bytes(),
+            self.config.max_fragments(),
+        )? {
             bytes_written += self.socket.send_to(fragment, &address)?;
         }
 
@@ -131,7 +141,7 @@ impl LaminarSocket {
     }
 
     /// Receives a single message from the socket. On success, returns the packet containing origin and data.
-    fn receive_from_socket(&mut self) -> io::Result<Option<Packet>> {
+    fn receive_from(&mut self) -> io::Result<Option<Packet>> {
         let (recv_len, address) = self.socket.recv_from(&mut self.receive_buffer)?;
         if recv_len <= 0 {
             return Err(LaminarError::ReceivedDataTooShort.into());

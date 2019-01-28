@@ -1,18 +1,17 @@
-use crate::packet::headers::{AckedPacketHeader, FragmentHeader};
+use crate::packet::headers::FragmentHeader;
 
 /// These are the different packets that could be send by te user.
 #[allow(dead_code)]
-pub enum PacketType {
-    /// Packet header containing packet information.
-    Normal(AckedPacketHeader),
-    /// Part of an packet also called 'fragment' containing fragment info.
-    Fragment(FragmentHeader),
-    /// Packet to keep the net.connection alive.
-    HeartBeat {/* fields ... */},
-    /// Disconnect request
-    Disconnect {/* fields ... */},
-}
-
+//pub enum PacketType {
+//    /// Packet header containing packet information.
+//    Normal(AckedPacketHeader),
+//    /// Part of an packet also called 'fragment' containing fragment info.
+//    Fragment(FragmentHeader),
+//    /// Packet to keep the net.connection alive.
+//    HeartBeat {/* fields ... */},
+//    /// Disconnect request
+//    Disconnect {/* fields ... */},
+//}
 #[derive(Copy, Clone, Debug, PartialOrd, PartialEq)]
 /// Id to identify an certain packet type.
 pub enum PacketTypeId {

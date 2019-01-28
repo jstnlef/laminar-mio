@@ -10,8 +10,6 @@ lazy_static! {
 /// This header provides reliability information to the packet.
 #[derive(Copy, Clone, Debug)]
 pub struct ReliableHeader {
-    /// This is the sequence number so that we can know where in the sequence of packets this packet belongs.
-    sequence_num: u16,
     // This is the last acknowledged sequence number.
     last_acked: u16,
     // This is a bitfield of all last 32 acknowledged packets.
@@ -19,18 +17,11 @@ pub struct ReliableHeader {
 }
 
 impl ReliableHeader {
-    pub fn new(sequence_num: u16, last_acked: u16, ack_field: u32) -> Self {
+    pub fn new(last_acked: u16, ack_field: u32) -> Self {
         Self {
-            sequence_num,
             last_acked,
             ack_field,
         }
-    }
-
-    /// Get the sequence number from this packet.
-    #[inline]
-    pub fn sequence_num(&self) -> u16 {
-        self.sequence_num
     }
 
     /// Get last acknowledged sequence number.
@@ -48,13 +39,12 @@ impl ReliableHeader {
 
 impl Default for ReliableHeader {
     fn default() -> Self {
-        Self::new(0, 0, 0)
+        Self::new(0, 0)
     }
 }
 
 impl HeaderWriter for ReliableHeader {
     fn write(&self, buffer: &mut Vec<u8>) -> io::Result<()> {
-        buffer.write_u16::<BigEndian>(self.sequence_num)?;
         buffer.write_u16::<BigEndian>(self.last_acked)?;
         buffer.write_u32::<BigEndian>(self.ack_field)?;
         Ok(())
@@ -65,11 +55,10 @@ impl HeaderReader for ReliableHeader {
     type Header = io::Result<Self>;
 
     fn read(rdr: &mut io::Cursor<&[u8]>) -> Self::Header {
-        let sequence_num = rdr.read_u16::<BigEndian>()?;
         let last_acked = rdr.read_u16::<BigEndian>()?;
         let ack_field = rdr.read_u32::<BigEndian>()?;
 
-        Ok(Self::new(sequence_num, last_acked, ack_field))
+        Ok(Self::new(last_acked, ack_field))
     }
 
     fn size(&self) -> usize {
@@ -84,7 +73,7 @@ mod tests {
 
     #[test]
     pub fn serialize_deserialize_reliable_header_test() {
-        let packet_header = ReliableHeader::new(1, 1, 5421);
+        let packet_header = ReliableHeader::new(1, 5421);
         let mut buffer = Vec::with_capacity(packet_header.size() + 1);
 
         let _ = packet_header.write(&mut buffer);
@@ -93,7 +82,6 @@ mod tests {
 
         match ReliableHeader::read(&mut cursor) {
             Ok(packet_deserialized) => {
-                assert_eq!(packet_deserialized.sequence_num(), 1);
                 assert_eq!(packet_deserialized.last_acked(), 1);
                 assert_eq!(packet_deserialized.ack_field(), 5421);
             }
@@ -103,6 +91,6 @@ mod tests {
 
     #[test]
     pub fn header_size_test() {
-        assert_eq!(ReliableHeader::default().size(), 8);
+        assert_eq!(ReliableHeader::default().size(), 6);
     }
 }
